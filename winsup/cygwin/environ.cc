@@ -1339,11 +1339,11 @@ build_env (const char * const *envp, PWCHAR &envblock, int &envc,
 	     Note that this doesn't stop invalid strings without '=' in it
 	     etc., but we're opting for speed here for now.  Adding complete
 	     checking would be pretty expensive. */
-	  if (len == 1 || !*rest)
+	  if (len == 1)
 	    continue;
 
 	  /* See if this entry requires posix->win32 conversion. */
-	  conv = getwinenv (*srcp, rest, &temp);
+	  conv = !*rest ? NULL : getwinenv (*srcp, rest, &temp);
 	  if (conv)
 	    {
 	      p = conv->native;	/* Use win32 path */
@@ -1357,7 +1357,7 @@ build_env (const char * const *envp, PWCHAR &envblock, int &envc,
 		}
 	    }
 #ifdef __MSYS__
-	  else if (!keep_posix) {
+	  else if (!keep_posix && *rest) {
 	    char *win_arg = arg_heuristic_with_exclusions
 		   (*srcp, msys2_env_conv_excl_env, msys2_env_conv_excl_count);
 	    debug_printf("WIN32_PATH is %s", win_arg);
