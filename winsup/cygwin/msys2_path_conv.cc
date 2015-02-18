@@ -376,6 +376,11 @@ skip_p2w:
             if (it + 1 < end && it[1] == '~')
                 goto skip_p2w;
             break;
+        case ':':
+            // Avoid mangling IPv6 addresses
+            if (it + 1 < end && it[1] == ':')
+                goto skip_p2w;
+            break;
         }
         ++it;
     }
