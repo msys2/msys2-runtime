@@ -470,6 +470,8 @@ skip_p2w:
 
     int starts_with_minus = 0;
     int starts_with_minus_alpha = 0;
+    int only_dots = *it == '.';
+    int has_slashes = 0;
     if (*it == '-') {
       starts_with_minus = 1;
       it += 1;
@@ -513,11 +515,17 @@ skip_p2w:
                 if (ch == '/' && *(it2 + 1) == '/') {
                     return URL;
                 } else {
+                    if (!only_dots && !has_slashes)
+                        goto skip_p2w;
                     return POSIX_PATH_LIST;
                 }
             } else if (memchr(it2, '=', end - it2) == NULL) {
                 return SIMPLE_WINDOWS_PATH;
             }
+        } else if (ch != '.') {
+            only_dots = 0;
+            if (ch == '/' || ch == '\\')
+                has_slashes = 1;
         }
     }
 
