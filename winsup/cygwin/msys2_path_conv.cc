@@ -372,6 +372,10 @@ skip_p2w:
         case '[':
         case ']':
             goto skip_p2w;
+        case '/':
+            if (it + 1 < end && it[1] == '~')
+                goto skip_p2w;
+            break;
         }
         ++it;
     }
