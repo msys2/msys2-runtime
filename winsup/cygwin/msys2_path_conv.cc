@@ -356,6 +356,12 @@ skip_p2w:
         return NONE;
     }
 
+    /*
+     * Prevent Git's :file.txt and :/message syntax from beeing modified.
+     */
+    if (*it == ':')
+        goto skip_p2w;
+
     while (!isalnum(*it) && *it != '/' && *it != '\\' && *it != ':' && *it != '-' && *it != '.') {
         recurse = true;
         it = ++*src;
