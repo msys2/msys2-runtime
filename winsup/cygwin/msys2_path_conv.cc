@@ -201,7 +201,7 @@ void ppl_convert(const char** from, const char* to, char** dst, const char* dste
 
 
 void find_end_of_posix_list(const char** to, int* in_string) {
-    for (; **to != '\0' && (in_string ? (**to != *in_string) : **to != ' '); ++*to) {
+    for (; **to != '\0' && (!in_string || **to != *in_string); ++*to) {
     }
 
     if (**to == *in_string) {
@@ -301,12 +301,6 @@ const char* convert(char *dst, size_t dstlen, const char *src) {
                 in_string = *srcit;
             }
             continue;
-        }
-
-        if (isspace(*srcit)) {
-            //sub_convert(&srcbeg, &srcit, &dstit, dstend, &in_string);
-            //srcbeg = srcit + 1;
-            break;
         }
     }
 
