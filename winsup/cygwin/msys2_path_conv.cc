@@ -389,6 +389,10 @@ skip_p2w:
                     goto skip_p2w;
             }
             break;
+        case '@':
+            // Paths do not contain '@@'
+            if (it + 1 < end && it[1] == '@')
+                goto skip_p2w;
         }
         ++it;
     }
