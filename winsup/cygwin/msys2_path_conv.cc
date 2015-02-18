@@ -380,6 +380,14 @@ skip_p2w:
             // Avoid mangling IPv6 addresses
             if (it + 1 < end && it[1] == ':')
                 goto skip_p2w;
+
+            // Leave Git's <rev>:./name syntax alone
+            if (it + 1 < end && it[1] == '.') {
+                if (it + 2 < end && it[2] == '/')
+                    goto skip_p2w;
+                if (it + 3 < end && it[2] == '.' && it[3] == '/')
+                    goto skip_p2w;
+            }
             break;
         }
         ++it;
