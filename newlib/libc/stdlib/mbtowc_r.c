@@ -36,7 +36,7 @@ __ascii_mbtowc (struct _reent *r,
   if (n == 0)
     return -2;
 
-#ifdef __CYGWIN__
+#ifdef STRICTLY_7BIT_ASCII
   if ((wchar_t)*t >= 0x80)
     {
       _REENT_ERRNO(r) = EILSEQ;
