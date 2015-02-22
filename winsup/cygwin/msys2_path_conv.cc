@@ -362,6 +362,21 @@ skip_p2w:
     if (*it == ':')
         goto skip_p2w;
 
+    while (it != end && *it) {
+        switch (*it) {
+        case '`':
+        case '\'':
+        case '"':
+        case '*':
+        case '?':
+        case '[':
+        case ']':
+            goto skip_p2w;
+        }
+        ++it;
+    }
+    it = *src;
+
     while (!isalnum(*it) && *it != '/' && *it != '\\' && *it != ':' && *it != '-' && *it != '.') {
         recurse = true;
         it = ++*src;
