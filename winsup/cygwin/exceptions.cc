@@ -29,6 +29,7 @@ details. */
 #include "exception.h"
 #include "posix_timer.h"
 #include "gcc_seh.h"
+#include "cygwin/exit_process.h"
 
 /* Define macros for CPU-agnostic register access.  The _CX_foo
    macros are for access into CONTEXT, the _MC_foo ones for access into
@@ -1598,10 +1599,25 @@ exit_sig:
 dosig:
   if (have_execed)
     {
-      sigproc_printf ("terminating captive process");
-      if (::cygheap->ctty)
-	::cygheap->ctty->cleanup_before_exit ();
-      TerminateProcess (ch_spawn, sigExeced = si.si_signo);
+      switch (si.si_signo)
+        {
+        case SIGUSR1:
+        case SIGUSR2:
+        case SIGCONT:
+        case SIGSTOP:
+        case SIGTSTP:
+        case SIGTTIN:
+        case SIGTTOU:
+          system_printf ("Suppressing signal %d to win32 process (pid %u)",
+              (int)si.si_signo, (unsigned int)GetProcessId(ch_spawn));
+          goto done;
+        default:
+          sigproc_printf ("terminating captive process");
+          if (::cygheap->ctty)
+	    ::cygheap->ctty->cleanup_before_exit ();
+          rc = exit_process_tree (ch_spawn, 128 + (sigExeced = si.si_signo));
+          goto done;
+        }
     }
   /* Dispatch to the appropriate function. */
   sigproc_printf ("signal %d, signal handler %p", si.si_signo, handler);
