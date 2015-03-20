@@ -17,6 +17,7 @@ details. */
 #include <cygwin/version.h>
 #include <getopt.h>
 #include <limits.h>
+#include <cygwin/exit_process.h>
 
 static char *prog_name;
 
@@ -186,10 +187,20 @@ forcekill (pid_t pid, DWORD winpid, int sig, int wait)
       return;
     }
   if (!wait || WaitForSingleObject (h, 200) != WAIT_OBJECT_0)
-    if (sig && !TerminateProcess (h, sig << 8)
-	&& WaitForSingleObject (h, 200) != WAIT_OBJECT_0)
-      fprintf (stderr, "%s: couldn't kill pid %u, %u\n",
-	       prog_name, (unsigned int) dwpid, (unsigned int) GetLastError ());
+    {
+      HANDLE cur = GetCurrentProcess (), h2;
+      /* duplicate handle with access rights required for exit_process_tree() */
+      if (DuplicateHandle (cur, h, cur, &h2, PROCESS_CREATE_THREAD |
+			      PROCESS_QUERY_INFORMATION |
+			      PROCESS_VM_OPERATION |
+			      PROCESS_VM_WRITE | PROCESS_VM_READ |
+			      PROCESS_TERMINATE, FALSE, 0))
+      {
+        CloseHandle(h);
+        h = h2;
+      }
+      exit_process_tree (h2, 128 + sig);
+    }
   CloseHandle (h);
 }
 
