@@ -341,6 +341,14 @@ path_type find_path_start_and_type(const char** src, int recurse, const char* en
 
     if (*it == '\0' || it == end) return NONE;
 
+    /*
+     * Skip path mangling when environment indicates it.
+     */
+    const char *no_pathconv = getenv ("MSYS_NO_PATHCONV");
+
+    if (no_pathconv)
+      return NONE;
+
     while (!isalnum(*it) && *it != '/' && *it != '\\' && *it != ':' && *it != '-' && *it != '.') {
         recurse = true;
         it = ++*src;
