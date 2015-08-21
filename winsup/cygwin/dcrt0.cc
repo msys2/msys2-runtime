@@ -153,12 +153,12 @@ isquote (char c)
 
 /* Step over a run of characters delimited by quotes */
 static /*__inline*/ char *
-quoted (char *cmd, int winshell)
+quoted (char *cmd, int winshell, int glob)
 {
   char *p;
   char quote = *cmd;
 
-  if (!winshell)
+  if (!winshell || !glob)
     {
       char *p;
       strcpy (cmd, cmd + 1);
@@ -168,8 +168,8 @@ quoted (char *cmd, int winshell)
     }
 
   const char *s = quote == '\'' ? "'" : "\\\"";
-  /* This must have been run from a Windows shell, so preserve
-     quotes for globify to play with later. */
+  /* This must have been run from a Windows shell and globbing is enabled,
+     so preserve quotes for globify to play with later. */
   while (*cmd && *++cmd)
     if ((p = strpbrk (cmd, s)) == NULL)
       {
@@ -290,7 +290,7 @@ globify (char *word, char **&argv, int &argc, int &argvlen)
 /* Build argv, argc from string passed from Windows.  */
 
 static void __stdcall
-build_argv (char *cmd, char **&argv, int &argc, int winshell)
+build_argv (char *cmd, char **&argv, int &argc, int winshell, int glob)
 {
   int argvlen = 0;
   int nesting = 0;		// monitor "nesting" from insert_file
@@ -324,7 +324,7 @@ build_argv (char *cmd, char **&argv, int &argc, int winshell)
 		 a Cygwin process, or if the word starts with a '@'.
 		 In this case, the insert_file function needs an unquoted
 		 DOS filename and globbing isn't performed anyway. */
-	      cmd = quoted (cmd, winshell && argc > 0 && *word != '@');
+	      cmd = quoted (cmd, winshell && argc > 0 && *word != '@', glob);
 	    }
 	  if (issep (*cmd))	// End of argument if space
 	    break;
@@ -350,7 +350,7 @@ build_argv (char *cmd, char **&argv, int &argc, int winshell)
 	}
 
       /* Add word to argv file after (optional) wildcard expansion. */
-      if (!winshell || !argc || !globify (word, argv, argc, argvlen))
+      if (!glob || !argc || !globify (word, argv, argc, argvlen))
 	{
 	  debug_printf ("argv[%d] = '%s'", argc, word);
 	  argv[argc++] = word;
@@ -934,6 +934,7 @@ dll_crt0_1 (void *)
       /* Scan the command line and build argv.  Expand wildcards if not
 	 called from another cygwin process. */
       build_argv (line, __argv, __argc,
+		  NOTSTATE (myself, PID_CYGPARENT),
 		  NOTSTATE (myself, PID_CYGPARENT) && allow_glob);
 
       /* Convert argv[0] to posix rules if it's currently blatantly
