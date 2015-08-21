@@ -309,6 +309,8 @@ build_argv (char *cmd, char **&argv, int &argc, int winshell, int glob)
   argvlen = 0;
   argv = NULL;
 
+  debug_printf ("cmd = '%s', winshell = %d, glob = %d", cmd, winshell, glob);
+
   /* Scan command line until there is nothing left. */
   while (*cmd)
     {
