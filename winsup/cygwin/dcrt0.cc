@@ -235,9 +235,19 @@ globify (char *word, char **&argv, int &argc, int &argvlen)
 	char quote = *s;
 	while (*++s && *s != quote)
 	  {
+	    /* This used to be:
 	    if (dos_spec || *s != '\\')
-	      /* nothing */;
+	      // nothing
 	    else if (s[1] == quote || s[1] == '\\')
+	      s++;
+	    With commit message:
+	       dcrt0.cc (globify): Don't use \ quoting when apparently quoting a DOS path
+	       spec, even within a quoted string.
+	    But that breaks the "literal quotes" part of '"C:/test.exe SOME_VAR=\"literal quotes\""'
+	    giving:    'C:/test.exe SOME_VAR=\literal quotes\' (with \'s between each character)
+	    instead of 'C:/test.exe SOME_VAR="literal quotes"' (with \'s between each character)
+	    */
+	    if (*s == '\\' && (s[1] == quote || s[1] == '\\'))
 	      s++;
 	    *p++ = '\\';
 	    size_t cnt = isascii (*s) ? 1 : mbtowc (NULL, s, MB_CUR_MAX);
