@@ -327,6 +327,7 @@ static win_env conv_envvars[] =
     {NL ("HOME="), NULL, NULL, env_path_to_posix, env_path_to_win32, false},
     {NL ("LD_LIBRARY_PATH="), NULL, NULL,
 			       env_plist_to_posix, env_plist_to_win32, true},
+    {NL ("SHELL="), NULL, NULL, env_path_to_posix, env_path_to_win32, true, true},
     {NL ("TMPDIR="), NULL, NULL, env_path_to_posix, env_path_to_win32, false},
     {NL ("TMP="), NULL, NULL, env_path_to_posix, env_path_to_win32, false},
     {NL ("TEMP="), NULL, NULL, env_path_to_posix, env_path_to_win32, false},
@@ -355,7 +356,7 @@ static const unsigned char conv_start_chars[256] =
     WC,       0,        0,        0,        WC,       0,        0,        0,
     /*  80 */
 /*  P         Q         R         S         T         U         V         W */
-    WC,       0,        0,        0,        WC,       0,        0,        0,
+    WC,       0,        0,        WC,       WC,       0,        0,        0,
     /*  88 */
 /*  x         Y         Z                                                   */
     0,        0,        0,        0,        0,        0,        0,        0,
@@ -384,6 +385,7 @@ win_env::operator = (struct win_env& x)
   toposix = x.toposix;
   towin32 = x.towin32;
   immediate = false;
+  skip_if_empty = x.skip_if_empty;
   return *this;
 }
 
@@ -405,6 +407,8 @@ win_env::add_cache (const char *in_posix, const char *in_native)
       native = (char *) realloc (native, namelen + 1 + strlen (in_native));
       stpcpy (stpcpy (native, name), in_native);
     }
+  else if (skip_if_empty && !*in_posix)
+    native = (char *) calloc(1, 1);
   else
     {
       tmp_pathbuf tp;
@@ -470,6 +474,8 @@ posify_maybe (char **here, const char *value, char *outenv)
     return;
 
   int len = strcspn (src, "=") + 1;
+  if (conv->skip_if_empty && !src[len])
+    return;
 
   /* Turn all the items from c:<foo>;<bar> into their
      mounted equivalents - if there is one.  */

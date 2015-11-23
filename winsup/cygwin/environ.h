@@ -21,7 +21,7 @@ struct win_env
     char *native;
     ssize_t (*toposix) (const void *, void *, size_t);
     ssize_t (*towin32) (const void *, void *, size_t);
-    bool immediate;
+    bool immediate, skip_if_empty;
     void __reg3 add_cache (const char *in_posix, const char *in_native = NULL);
     const char * get_native () const {return native ? native + namelen : NULL;}
     const char * get_posix () const {return posix ? posix : NULL;}
