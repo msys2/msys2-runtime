@@ -1176,6 +1176,10 @@ build_env (const char * const *envp, PWCHAR &envblock, int &envc,
 
   int tl = 0;
   char **pass_dstp;
+#ifdef __MSYS__
+  char *msys2_env_conv_excl_env = NULL;
+  size_t msys2_env_conv_excl_count = 0;
+#endif
   char **pass_env = (char **) alloca (sizeof (char *)
 				      * (n + winnum + SPENVS_SIZE + 1));
   /* Iterate over input list, generating a new environment list and refreshing
@@ -1184,16 +1188,25 @@ build_env (const char * const *envp, PWCHAR &envblock, int &envc,
     {
       bool calc_tl = !no_envblock;
 #ifdef __MSYS__
-      /* Don't pass timezone environment to non-msys applications */
-      if (!keep_posix && ascii_strncasematch(*srcp, "TZ=", 3))
+      if (!keep_posix)
         {
-          const char *v = *srcp + 3;
-          if (*v == ':')
-            goto next1;
-          for (; *v; v++)
-            if (!isalpha(*v) && !isdigit(*v) &&
-                *v != '-' && *v != '+' && *v != ':')
-              goto next1;
+          /* Don't pass timezone environment to non-msys applications */
+          if (ascii_strncasematch(*srcp, "TZ=", 3))
+            {
+              const char *v = *srcp + 3;
+              if (*v == ':')
+                goto next1;
+              for (; *v; v++)
+                if (!isalpha(*v) && !isdigit(*v) &&
+                    *v != '-' && *v != '+' && *v != ':')
+                  goto next1;
+            }
+          else if (ascii_strncasematch(*srcp, "MSYS2_ENV_CONV_EXCL=", 20))
+            {
+              msys2_env_conv_excl_env = (char*)alloca (strlen(&(*srcp)[20])+1);
+              strcpy (msys2_env_conv_excl_env, &(*srcp)[20]);
+              msys2_env_conv_excl_count = string_split_delimited (msys2_env_conv_excl_env, ';');
+            }
         }
 #endif
       /* Look for entries that require special attention */
@@ -1318,7 +1331,8 @@ build_env (const char * const *envp, PWCHAR &envblock, int &envc,
 	    }
 #ifdef __MSYS__
 	  else if (!keep_posix) {
-	    char *win_arg = arg_heuristic(*srcp);
+	    char *win_arg = arg_heuristic_with_exclusions
+		   (*srcp, msys2_env_conv_excl_env, msys2_env_conv_excl_count);
 	    debug_printf("WIN32_PATH is %s", win_arg);
 	    p = cstrdup1(win_arg);
 	    if (win_arg != *srcp)

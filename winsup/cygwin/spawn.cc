@@ -261,8 +261,7 @@ child_info_spawn::worker (const char *prog_arg, const char *const *argv,
   int res = -1;
 
   /* Environment variable MSYS2_ARG_CONV_EXCL contains a list
-     of ';' separated argument prefixes to pass un-modified..
-     It isn't applied to env. variables; only spawn arguments.
+     of ';' separated argument prefixes to pass un-modified.
      A value of * means don't convert any arguments. */
   char* msys2_arg_conv_excl_env = getenv("MSYS2_ARG_CONV_EXCL");
   char* msys2_arg_conv_excl = NULL;
@@ -271,14 +270,7 @@ child_info_spawn::worker (const char *prog_arg, const char *const *argv,
     {
       msys2_arg_conv_excl = (char*)alloca (strlen(msys2_arg_conv_excl_env)+1);
       strcpy (msys2_arg_conv_excl, msys2_arg_conv_excl_env);
-      msys2_arg_conv_excl_count = 1;
-      msys2_arg_conv_excl_env = strchr ( msys2_arg_conv_excl, ';' );
-      while (msys2_arg_conv_excl_env)
-        {
-          *msys2_arg_conv_excl_env = '\0';
-          ++msys2_arg_conv_excl_count;
-          msys2_arg_conv_excl_env = strchr ( msys2_arg_conv_excl_env + 1, ';' );
-        }
+      msys2_arg_conv_excl_count = string_split_delimited (msys2_arg_conv_excl, ';');
     }
 
   /* Check if we have been called from exec{lv}p or spawn{lv}p and mask

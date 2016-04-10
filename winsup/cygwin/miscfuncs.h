@@ -88,6 +88,8 @@ void backslashify (const char *, char *, bool);
 void slashify (const char *, char *, bool);
 #define isslash(c) ((c) == '/')
 
+size_t string_split_delimited (char * string, char delimiter);
+
 extern void transform_chars (PWCHAR, PWCHAR);
 extern inline void
 transform_chars (PUNICODE_STRING upath, USHORT start_idx)
