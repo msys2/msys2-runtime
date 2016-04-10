@@ -311,6 +311,26 @@ NT_readline::gets ()
     }
 }
 
+/* Searches through string for delimiter replacing each instance with '\0'
+   and returning the number of such delimited substrings. This function
+   Will return 0 for the NULL string and at least 1 otherwise. */
+
+size_t
+string_split_delimited (char * string, char delimiter)
+{
+  if ( string == NULL )
+      return 0;
+  size_t count = 1;
+  string = strchr ( string, delimiter );
+  while (string)
+    {
+      *string = '\0';
+      ++count;
+      string = strchr ( string + 1, delimiter );
+    }
+  return count;
+}
+
 /* Signal the thread name to any attached debugger
 
    (See "How to: Set a Thread Name in Native Code"
