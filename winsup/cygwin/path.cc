@@ -3612,7 +3612,6 @@ arg_heuristic_with_exclusions (char const * const arg, char const * exclusions, 
     return arg_result;
   }
 
-  debug_printf("Input value: (%s)", arg);
   for (size_t excl = 0; excl < exclusions_count; ++excl)
     {
       /* Since we've got regex linked we should maybe switch to that, but
