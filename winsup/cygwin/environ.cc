@@ -327,6 +327,7 @@ static win_env conv_envvars[] =
     {NL ("HOME="), NULL, NULL, env_path_to_posix, env_path_to_win32, false},
     {NL ("LD_LIBRARY_PATH="), NULL, NULL,
 			       env_plist_to_posix, env_plist_to_win32, true},
+    {NL ("ORIGINAL_PATH="), NULL, NULL, env_PATH_to_posix, env_plist_to_win32, true},
     {NL ("SHELL="), NULL, NULL, env_path_to_posix, env_path_to_win32, true, true},
     {NL ("TMPDIR="), NULL, NULL, env_path_to_posix, env_path_to_win32, false},
     {NL ("TMP="), NULL, NULL, env_path_to_posix, env_path_to_win32, false},
@@ -353,7 +354,7 @@ static const unsigned char conv_start_chars[256] =
     0,        0,        0,        0,        0,        0,        0,        0,
     /*  72 */
 /*  H         I         J         K         L         M         N         O */
-    WC,       0,        0,        0,        WC,       0,        0,        0,
+    WC,       0,        0,        0,        WC,       0,        0,        WC,
     /*  80 */
 /*  P         Q         R         S         T         U         V         W */
     WC,       0,        0,        WC,       WC,       0,        0,        0,
