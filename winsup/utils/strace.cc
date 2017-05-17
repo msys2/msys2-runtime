@@ -351,7 +351,8 @@ create_child (char **argv)
     flags |= CREATE_NEW_CONSOLE | CREATE_NEW_PROCESS_GROUP;
 
   make_command_line (one_line, argv);
-  printf ("create_child: %s\n", one_line.buf);
+  if (!quiet)
+    printf ("create_child: %s\n", one_line.buf);
 
   SetConsoleCtrlHandler (NULL, 0);
 /* Commit message for this code was:
