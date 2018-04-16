@@ -26,6 +26,21 @@ bin_PROGRAMS = \
 	ldh \
 	strace
 
+libexec_PROGRAMS = getprocaddr32 getprocaddr64
+
+# Must *not* use -O2 here, as it screws up the stack backtrace
+getprocaddr32.o: %32.o: %.c
+	$(MINGW32_CC) -c -o $@ $<
+
+getprocaddr32.exe: %.exe: %.o
+	$(MINGW32_CC) -o $@ $^ -static -ldbghelp
+
+getprocaddr64.o: %64.o: %.c
+	$(MINGW64_CC) -c -o $@ $<
+
+getprocaddr64.exe: %.exe: %.o
+	$(MINGW64_CC) -o $@ $^ -static -ldbghelp
+
 cygcheck_SOURCES = \
 	bloda.cc \
 	cygcheck.cc \
