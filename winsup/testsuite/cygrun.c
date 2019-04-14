@@ -47,7 +47,7 @@ main (int argc, char **argv)
       exit (1);
     }
 
-  SetEnvironmentVariable ("CYGWIN_TESTING", "1");
+  SetEnvironmentVariable ("MSYS_TESTING", "1");
 
   memset (&sa, 0, sizeof (sa));
   memset (&pi, 0, sizeof (pi));
