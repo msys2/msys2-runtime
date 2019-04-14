@@ -1,10 +1,18 @@
 #ifdef __x86_64__
 OUTPUT_FORMAT(pei-x86-64)
+# ifdef __MSYS__
+SEARCH_DIR("/usr/x86_64-pc-msys/lib/w32api"); SEARCH_DIR("=/usr/lib/w32api");
+# else
 SEARCH_DIR("/usr/x86_64-pc-cygwin/lib/w32api"); SEARCH_DIR("=/usr/lib/w32api");
+# endif
 #else
 #undef i386
 OUTPUT_FORMAT(pei-i386)
+# ifdef __MSYS__
+SEARCH_DIR("/usr/i686-pc-msys/lib/w32api"); SEARCH_DIR("=/usr/lib/w32api");
+# else
 SEARCH_DIR("/usr/i686-pc-cygwin/lib/w32api"); SEARCH_DIR("=/usr/lib/w32api");
+# endif
 #endif
 #define __CONCAT1(a,b)	a##b
 #define __CONCAT(a,b) __CONCAT1(a,b)
@@ -115,13 +123,14 @@ SECTIONS
   }
   .gnu_debuglink_overlay ALIGN(__section_alignment__) (NOLOAD):
   {
-    BYTE(0)	/* c */
+    BYTE(0)	/* m */
+    BYTE(0)	/* s */
     BYTE(0)	/* y */
-    BYTE(0)	/* g */
-    BYTE(0)	/* w */
-    BYTE(0)	/* i */
-    BYTE(0)	/* n */
-    BYTE(0)	/* 1 */
+    BYTE(0)	/* s */
+    BYTE(0)	/* - */
+    BYTE(0)	/* 2 */
+    BYTE(0)	/* . */
+    BYTE(0)	/* 0 */
     BYTE(0)	/* . */
     BYTE(0)	/* d */
     BYTE(0)	/* b */

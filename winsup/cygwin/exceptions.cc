@@ -501,14 +501,14 @@ try_to_debug (bool waitloop)
   PWCHAR rawenv = GetEnvironmentStringsW () ;
   for (PWCHAR p = rawenv; *p != L'\0'; p = wcschr (p, L'\0') + 1)
     {
-      if (wcsncmp (p, L"CYGWIN=", wcslen (L"CYGWIN=")) == 0)
+      if (wcsncmp (p, L"MSYS=", wcslen (L"MSYS=")) == 0)
 	{
 	  PWCHAR q = wcsstr (p, L"error_start") ;
 	  /* replace 'error_start=...' with '_rror_start=...' */
 	  if (q)
 	    {
 	      *q = L'_' ;
-	      SetEnvironmentVariableW (L"CYGWIN", p + wcslen (L"CYGWIN=")) ;
+	      SetEnvironmentVariableW (L"MSYS", p + wcslen (L"MSYS=")) ;
 	    }
 	  break;
 	}
