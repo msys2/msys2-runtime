@@ -1,6 +1,10 @@
 #ifdef __x86_64__
 OUTPUT_FORMAT(pei-x86-64)
+# ifdef __MSYS__
+SEARCH_DIR("/usr/x86_64-pc-msys/lib/w32api"); SEARCH_DIR("=/usr/lib/w32api");
+# else
 SEARCH_DIR("/usr/x86_64-pc-cygwin/lib/w32api"); SEARCH_DIR("=/usr/lib/w32api");
+# endif
 #else
 #error unimplemented for this target
 #endif
