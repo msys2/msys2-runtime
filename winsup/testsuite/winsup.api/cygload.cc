@@ -25,7 +25,7 @@
 		     save for errors.
      -testinterrupts Pauses the program for 30 seconds so you can demonstrate
 		     that it handles ^C properly.
-     -cygwin         Name of DLL to load.  Defaults to "cygwin1.dll". */
+     -cygwin         Name of DLL to load.  Defaults to "msys-2.0.dll". */
 
 #include "cygload.h"
 #include <iostream>
@@ -136,15 +136,15 @@ cygwin::connector::connector (const char *dll)
   if ((_library = LoadLibrary (dll)) == NULL)
     throw windows_error ("LoadLibrary", dll);
 
-  *out << "Initializing cygwin..." << endl;
+  *out << "Initializing msys..." << endl;
 
-  // This calls dcrt0.cc:cygwin_dll_init(), which calls dll_crt0_1(),
+  // This calls dcrt0.cc:msys_dll_init(), which calls dll_crt0_1(),
   // which will, among other things:
   // * spawn the cygwin signal handling thread from sigproc_init()
   // * initialize the thread-local storage for this thread and overwrite
   //   the first 4K of the stack
   void (*cyginit) ();
-  get_symbol ("cygwin_dll_init", cyginit);
+  get_symbol ("msys_dll_init", cyginit);
   (*cyginit) ();
 
   *out << "Loading symbols..." << endl;
@@ -210,7 +210,7 @@ cygwin::connector::~connector ()
 
     // This should call init.cc:dll_entry() with DLL_PROCESS_DETACH.
     if (!FreeLibrary (_library))
-      throw windows_error ("FreeLibrary", "cygwin1.dll");
+      throw windows_error ("FreeLibrary", "msys-2.0.dll");
   }
   catch (std::exception &x)
   {
@@ -476,7 +476,7 @@ main (int argc, char *argv[])
 
   std::ostringstream output;
   bool verbose = false, testinterrupts = false;
-  const char *dll = "cygwin1.dll";
+  const char *dll = "msys-2.0.dll";
 
   out = &output;
 
