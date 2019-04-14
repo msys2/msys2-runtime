@@ -462,7 +462,7 @@ verify_token (HANDLE token, cygsid &usersid, user_groups &groups, bool *pintern)
       if (!NT_SUCCESS (status))
 	debug_printf ("NtQueryInformationToken(), %y", status);
       else
-	*pintern = intern = !memcmp (ts.SourceName, "Cygwin.1", 8);
+	*pintern = intern = !memcmp (ts.SourceName, "MSYS.2", 6);
     }
   /* Verify usersid */
   cygsid tok_usersid (NO_SID);
@@ -747,7 +747,7 @@ s4uauth (bool logon, PCWSTR domain, PCWSTR user, NTSTATUS &ret_status)
     {
       /* Register as logon process. */
       debug_printf ("Impersonation requested");
-      RtlInitAnsiString (&name, "Cygwin");
+      RtlInitAnsiString (&name, "MSYS");
       status = LsaRegisterLogonProcess (&name, &lsa_hdl, &sec_mode);
     }
   else
@@ -786,11 +786,11 @@ s4uauth (bool logon, PCWSTR domain, PCWSTR user, NTSTATUS &ret_status)
     }
 
   /* Create origin. */
-  stpcpy (origin.buf, "Cygwin");
+  stpcpy (origin.buf, "MSYS");
   RtlInitAnsiString (&origin.str, origin.buf);
 
   /* Create token source. */
-  memcpy (ts.SourceName, "Cygwin.1", 8);
+  memcpy (ts.SourceName, "MSYS.2", 6);
   ts.SourceIdentifier.HighPart = 0;
   ts.SourceIdentifier.LowPart = kerberos_auth ? 0x0105 : 0x0106;
 
