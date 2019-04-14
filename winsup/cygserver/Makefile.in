@@ -50,16 +50,16 @@ LIBOBJS:=${patsubst %.o,lib%.o,$(OBJS)}
 
 CYGWIN_OBJS:=$(cygwin_build)/version.o
 
-CYGWIN_LIB:=$(cygwin_build)/libcygwin.a
+CYGWIN_LIB:=$(cygwin_build)/libmsys-2.0.a
 
 all: cygserver.exe
 
 install: all cygserver.conf cygserver-config README
-	/bin/mkdir -p $(DESTDIR)$(sbindir) $(DESTDIR)$(bindir) $(DESTDIR)$(sysconfdir)/defaults/etc $(DESTDIR)$(prefix)/share/doc/Cygwin
+	/bin/mkdir -p $(DESTDIR)$(sbindir) $(DESTDIR)$(bindir) $(DESTDIR)$(sysconfdir)/defaults/etc $(DESTDIR)$(prefix)/share/doc/Msys
 	$(INSTALL_PROGRAM) cygserver.exe $(DESTDIR)$(sbindir)/cygserver.exe
 	$(INSTALL_PROGRAM) $(srcdir)/cygserver-config $(DESTDIR)$(bindir)/cygserver-config
 	$(INSTALL_DATA) $(srcdir)/cygserver.conf $(DESTDIR)$(sysconfdir)/defaults/etc/cygserver.conf
-	$(INSTALL_DATA) $(srcdir)/README $(DESTDIR)$(prefix)/share/doc/Cygwin/cygserver.README
+	$(INSTALL_DATA) $(srcdir)/README $(DESTDIR)$(prefix)/share/doc/Msys/cygserver.README
 
 clean:
 	rm -f $(OBJS) ${patsubst %.o,%.d,$(OBJS)} cygserver.exe
