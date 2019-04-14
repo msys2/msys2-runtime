@@ -34,7 +34,7 @@ AC_LANG(C++)
 AC_CYGWIN_INCLUDES
 
 case "$with_cross_host" in
-  ""|*cygwin*)
+  ""|*cygwin*|*msys*)
     all_host="all_host"
     install_host="install_host"
     ;;
