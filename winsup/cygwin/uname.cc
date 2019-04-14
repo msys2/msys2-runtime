@@ -30,7 +30,10 @@ uname_x (struct utsname *name)
 
       memset (name, 0, sizeof (*name));
       /* sysname */
-      __small_sprintf (name->sysname, "CYGWIN_%s-%u%s",
+      char* msystem = getenv("MSYSTEM");
+      const char *msystem_msys = "MSYS";
+      __small_sprintf (name->sysname, "%s_%s-%u%s",
+		       msystem ? msystem : msystem_msys,
 		       wincap.osname (), wincap.build_number (),
 		       wincap.is_wow64 () ? "-WOW64" : "");
       /* nodename */
@@ -76,7 +79,7 @@ uname_x (struct utsname *name)
 /* Old entrypoint for applications up to API 334 */
 struct old_utsname
 {
-  char sysname[20];
+  char sysname[21];
   char nodename[20];
   char release[20];
   char version[20];
@@ -92,7 +95,13 @@ uname (struct utsname *in_name)
       char *snp = strstr  (cygwin_version.dll_build_date, "SNP");
 
       memset (name, 0, sizeof (*name));
+#ifdef __MSYS__
+      char* msystem = getenv("MSYSTEM");
+      const char *msystem_msys = "MSYS";
+      __small_sprintf (name->sysname, "%s_%s", msystem ? msystem : msystem_msys, wincap.osname ());
+#else
       __small_sprintf (name->sysname, "CYGWIN_%s", wincap.osname ());
+#endif
 
       /* Add a hint to the sysname, that we're running under WOW64.  This might
 	 give an early clue if somebody encounters problems. */
