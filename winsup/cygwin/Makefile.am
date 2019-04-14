@@ -37,15 +37,15 @@ newlib_build=$(target_builddir)/newlib
 toollibdir=$(tooldir)/lib
 toolincludedir=$(tooldir)/include
 
-# Parameters used in building the cygwin.dll.
+# Parameters used in building the msys-2.0.dll.
 
-DLL_NAME=cygwin1.dll
-TEST_DLL_NAME=cygwin0.dll
+DLL_NAME=msys-2.0.dll
+TEST_DLL_NAME=msys0.dll
 DIN_FILE=@DIN_FILE@
-DEF_FILE=cygwin.def
+DEF_FILE=msys.def
 TLSOFFSETS_H=@TLSOFFSETS_H@
-LIB_NAME=libcygwin.a
-TEST_LIB_NAME=libcygwin0.a
+LIB_NAME=libmsys-2.0.a
+TEST_LIB_NAME=libmsys0.a
 
 #
 # sources
@@ -613,32 +613,32 @@ LIBSERVER = $(cygserver_blddir)/libcygserver.a
 $(LIBSERVER):
 	$(MAKE) -C $(cygserver_blddir) libcygserver.a
 
-# We build as cygwin0.dll and rename at install time to overcome native
+# We build as msys-2.0.dll and rename at install time to overcome native
 # rebuilding issues (we don't want the build tools to see a partially built
-# cygwin.dll and attempt to use it instead of the old one).
+# msys-2.0.dll and attempt to use it instead of the old one).
 
 # linker script
 LDSCRIPT=cygwin.sc
 $(LDSCRIPT): $(LDSCRIPT).in
 	$(CC) -E - -P < $^ -o $@
 
-# cygwin dll
+# msys-2.0 dll
 $(TEST_DLL_NAME): $(LDSCRIPT) dllfixdbg libdll.a $(VERSION_OFILES) $(LIBSERVER)
 	$(CXX) $(CXXFLAGS) \
 	-mno-use-libstdc-wrappers \
 	-Wl,--gc-sections -nostdlib -Wl,-T$(LDSCRIPT) -static \
-	-Wl,--heap=0 -Wl,--out-implib,cygdll.a -shared -o $@ \
+	-Wl,--heap=0 -Wl,--out-implib,msysdll.a -shared -o $@ \
 	-e @DLL_ENTRY@ $(DEF_FILE) \
 	-Wl,-whole-archive libdll.a -Wl,-no-whole-archive \
 	$(VERSION_OFILES) \
 	$(LIBSERVER) \
 	$(newlib_build)/libm/libm.a \
 	$(newlib_build)/libc/libc.a \
-	-lgcc -lkernel32 -lntdll -Wl,-Map,cygwin.map
-	$(srcdir)/dllfixdbg $(OBJDUMP) $(OBJCOPY) $@ cygwin1.dbg
-	@ln -f $@ new-cygwin1.dll
+	-lgcc -lkernel32 -lntdll -Wl,-Map,msys.map
+	$(srcdir)/dllfixdbg $(OBJDUMP) $(OBJCOPY) $@ msys-2.0.dbg
+	@ln -f $@ new-msys-2.0.dll
 
-# cygwin import library
+# msys-2.0 import library
 toolopts=--cpu=@target_cpu@ --ar=@AR@ --as=@AS@ --nm=@NM@ --objcopy=@OBJCOPY@
 
 $(DEF_FILE): gendef $(srcdir)/$(TLSOFFSETS_H) $(DIN_FILE) common.din
@@ -651,17 +651,18 @@ sigfe.s: $(DEF_FILE)
 
 LIBCOS=$(addsuffix .o,$(basename $(LIB_FILES)))
 $(LIB_NAME): $(DEF_FILE) $(LIBCOS) | $(TEST_DLL_NAME)
-	$(srcdir)/mkimport $(toolopts) $(NEW_FUNCTIONS) $@ cygdll.a $(wordlist 2,99,$^)
+	$(srcdir)/mkimport $(toolopts) $(NEW_FUNCTIONS) $@ msysdll.a $(wordlist 2,99,$^)
 
-# cygwin import library used by testsuite
+# msys-2.0 import library used by testsuite
 $(TEST_LIB_NAME): $(LIB_NAME)
-	perl -p -e 'BEGIN{binmode(STDIN); binmode(STDOUT);}; s/cygwin1/cygwin0/g' < $? > $@
+	perl -p -e 'BEGIN{binmode(STDIN); binmode(STDOUT);}; s/msys-2.0/msys0/g' < $? > $@
 
 # sublibs
 # import libraries for some subset of symbols indicated by given objects
 speclib=\
 	$(srcdir)/speclib $(toolopts) \
 	--exclude='cygwin' \
+	--exclude='msys' \
 	--exclude='(?i:dll)' \
 	--exclude='reloc' \
 	--exclude='^main$$' \
@@ -708,7 +709,7 @@ all-local: $(LIB_NAME) $(TEST_LIB_NAME) $(SUBLIBS)
 clean-local:
 	-rm -f $(BUILT_SOURCES)
 	-rm -f $(DEF_FILE) sigfe.s
-	-rm -f cygwin.sc cygdll.a cygwin.map $(TEST_DLL_NAME) cygwin1.dbg new-cygwin1.dll
+	-rm -f cygwin.sc msysdll.a msys.map $(TEST_DLL_NAME) msys-2.0.dbg new-msys-2.0.dll
 	-rm -f $(LIB_NAME) $(TEST_LIB_NAME) $(SUBLIBS)
 	-rm -f version.cc
 
@@ -728,6 +729,7 @@ install-libs:
 	@$(MKDIR_P) $(DESTDIR)$(bindir)
 	$(INSTALL_PROGRAM) $(TEST_DLL_NAME) $(DESTDIR)$(bindir)/$(DLL_NAME)
 	@$(MKDIR_P) $(DESTDIR)$(toollibdir)
+	$(INSTALL_DATA) msys-2.0.dbg $(DESTDIR)$(bindir)/msys-2.0.dbg
 	(cd $(DESTDIR)$(toollibdir) && ln -sf $(LIB_NAME) libg.a)
 
 install-headers:
@@ -750,7 +752,7 @@ install-ldif:
 uninstall-hook: uninstall-headers uninstall-ldif uninstall-libs
 
 uninstall-libs:
-	rm -f $(DESTDIR)$(bindir)/cygwin1.dll
+	rm -f $(DESTDIR)$(bindir)/msys-2.0.dll
 	rm -f $(DESTDIR)$(toollibdir)/libg.a
 
 uninstall-headers:
