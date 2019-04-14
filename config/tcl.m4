@@ -33,7 +33,7 @@ AC_DEFUN([SC_PATH_TCLCONFIG], [
 
 	    # First check to see if --with-tcl was specified.
 	    case "${host}" in
-		*-*-cygwin*) platDir="win" ;;
+		*-*-cygwin* | *-*-msys*) platDir="win" ;;
 		*) platDir="unix" ;;
 	    esac
 	    if test x"${with_tclconfig}" != x ; then
@@ -165,7 +165,7 @@ AC_DEFUN([SC_PATH_TKCONFIG], [
 
 	    # then check for a private Tk library
 	    case "${host}" in
-		*-*-cygwin*) platDir="win" ;;
+		*-*-cygwin* | *-*-msys*) platDir="win" ;;
 		*) platDir="unix" ;;
 	    esac
 	    if test x"${ac_cv_c_tkconfig}" = x ; then

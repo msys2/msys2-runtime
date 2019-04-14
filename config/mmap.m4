@@ -42,7 +42,7 @@ else
    # Systems known to be in this category are Windows (all variants),
    # VMS, and Darwin.
    case "$host_os" in
-     *vms* | cygwin* | pe | mingw* | darwin* | ultrix* | hpux10* | hpux11.00)
+     *vms* | cygwin* | msys* | pe | mingw* | darwin* | ultrix* | hpux10* | hpux11.00)
         gcc_cv_func_mmap_dev_zero=no ;;
      *)
         gcc_cv_func_mmap_dev_zero=yes;;
@@ -74,7 +74,7 @@ else
    # above for use of /dev/zero.
    # Systems known to be in this category are Windows, VMS, and SCO Unix.
    case "$host_os" in
-     *vms* | cygwin* | pe | mingw* | sco* | udk* )
+     *vms* | cygwin* | msys* | pe | mingw* | sco* | udk* )
         gcc_cv_func_mmap_anon=no ;;
      *)
         gcc_cv_func_mmap_anon=yes;;
