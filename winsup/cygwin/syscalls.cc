@@ -327,7 +327,7 @@ try_to_bin (path_conv &pc, HANDLE &fh, ACCESS_MASK access, ULONG flags)
     }
   else
     {
-      /* Create unique filename.  Start with a dot, followed by "cyg"
+      /* Create unique filename.  Start with a dot, followed by "msys"
 	 transposed into the Unicode low surrogate area (U+dc00) on file
 	 systems supporting Unicode (except Samba), followed by the inode
 	 number in hex, followed by a path hash in hex.  The combination
@@ -335,7 +335,7 @@ try_to_bin (path_conv &pc, HANDLE &fh, ACCESS_MASK access, ULONG flags)
       RtlAppendUnicodeToString (&recycler,
 				(pc.fs_flags () & FILE_UNICODE_ON_DISK
 				 && !pc.fs_is_samba ())
-				? L".\xdc63\xdc79\xdc67" : L".cyg");
+				? L".\xdc6d\xdc73\xdc79\xdc73" : L".msys");
       pfii = (PFILE_INTERNAL_INFORMATION) infobuf;
       status = NtQueryInformationFile (fh, &io, pfii, sizeof *pfii,
 				       FileInternalInformation);
