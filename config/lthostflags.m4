@@ -13,7 +13,7 @@ AC_DEFUN([ACX_LT_HOST_FLAGS], [
 AC_REQUIRE([AC_CANONICAL_SYSTEM])
 
 case $host in
-  *-cygwin* | *-mingw*)
+  *-cygwin* | *-msys* | *-mingw*)
     # 'host' will be top-level target in the case of a target lib,
     # we must compare to with_cross_host to decide if this is a native
     # or cross-compiler and select where to install dlls appropriately.
