@@ -171,7 +171,6 @@ class mount_info
   mount_item mount[MAX_MOUNTS];
 
   static bool got_usr_bin;
-  static bool got_usr_lib;
   static int root_idx;
 
   /* cygdrive_prefix is used as the root of the path automatically
@@ -183,6 +182,8 @@ class mount_info
  private:
   int posix_sorted[MAX_MOUNTS];
   int native_sorted[MAX_MOUNTS];
+  int longest_posix_sorted[MAX_MOUNTS];
+  int shortest_native_sorted[MAX_MOUNTS];
 
  public:
   void init (bool);
