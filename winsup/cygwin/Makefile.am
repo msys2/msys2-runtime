@@ -306,6 +306,7 @@ DLL_FILES= \
 	miscfuncs.cc \
 	mktemp.cc \
 	msg.cc \
+	msys2_path_conv.cc \
 	mount.cc \
 	net.cc \
 	netdb.cc \
