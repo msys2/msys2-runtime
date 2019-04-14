@@ -260,6 +260,27 @@ child_info_spawn::worker (const char *prog_arg, const char *const *argv,
   bool rc;
   int res = -1;
 
+  /* Environment variable MSYS2_ARG_CONV_EXCL contains a list
+     of ';' separated argument prefixes to pass un-modified..
+     It isn't applied to env. variables; only spawn arguments.
+     A value of * means don't convert any arguments. */
+  char* msys2_arg_conv_excl_env = getenv("MSYS2_ARG_CONV_EXCL");
+  char* msys2_arg_conv_excl = NULL;
+  size_t msys2_arg_conv_excl_count = 0;
+  if (msys2_arg_conv_excl_env)
+    {
+      msys2_arg_conv_excl = (char*)alloca (strlen(msys2_arg_conv_excl_env)+1);
+      strcpy (msys2_arg_conv_excl, msys2_arg_conv_excl_env);
+      msys2_arg_conv_excl_count = 1;
+      msys2_arg_conv_excl_env = strchr ( msys2_arg_conv_excl, ';' );
+      while (msys2_arg_conv_excl_env)
+        {
+          *msys2_arg_conv_excl_env = '\0';
+          ++msys2_arg_conv_excl_count;
+          msys2_arg_conv_excl_env = strchr ( msys2_arg_conv_excl_env + 1, ';' );
+        }
+    }
+
   /* Check if we have been called from exec{lv}p or spawn{lv}p and mask
      mode to keep only the spawn mode. */
   bool p_type_exec = !!(mode & _P_PATH_TYPE_EXEC);
@@ -369,12 +390,26 @@ child_info_spawn::worker (const char *prog_arg, const char *const *argv,
 	      moreinfo->argc = newargv.argc;
 	      moreinfo->argv = newargv;
 	    }
-	  if ((wincmdln || !real_path.iscygexec ())
-	       && !cmd.fromargv (newargv, real_path.get_win32 (),
-				 real_path.iscygexec ()))
+	  else
 	    {
-	      res = -1;
-	      __leave;
+	      for (int i = 0; i < newargv.argc; i++)
+	        {
+	          //convert argv to win32
+	          int newargvlen = strlen (newargv[i]);
+	          char *tmpbuf = (char *)malloc (newargvlen + 1);
+	          memcpy (tmpbuf, newargv[i], newargvlen + 1);
+	          tmpbuf = arg_heuristic_with_exclusions(tmpbuf, msys2_arg_conv_excl, msys2_arg_conv_excl_count);
+	          debug_printf("newargv[%d] = %s", i, newargv[i]);
+	          newargv.replace (i, tmpbuf);
+	          free (tmpbuf);
+	        }
+	      if ((wincmdln || !real_path.iscygexec ())
+	            && !cmd.fromargv (newargv, real_path.get_win32 (),
+			        real_path.iscygexec ()))
+	        {
+	          res = -1;
+	          __leave;
+	        }
 	    }
 
 
@@ -506,7 +541,8 @@ child_info_spawn::worker (const char *prog_arg, const char *const *argv,
       moreinfo->envp = build_env (envp, envblock, moreinfo->envc,
 				  real_path.iscygexec (),
 				  switch_user ? ::cygheap->user.primary_token ()
-					      : NULL);
+					      : NULL,
+				  real_path.iscygexec ());
       if (!moreinfo->envp || !envblock)
 	{
 	  set_errno (E2BIG);

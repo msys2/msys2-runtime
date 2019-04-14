@@ -344,6 +344,7 @@ DLL_OFILES:= \
 	mmap.o \
 	msg.o \
 	msgcat.o \
+	msys2_path_conv.o \
 	mount.o \
 	net.o \
 	netdb.o \

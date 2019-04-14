@@ -1053,7 +1053,7 @@ env_compare (const void *key, const void *memb)
    to the child. */
 char ** __reg3
 build_env (const char * const *envp, PWCHAR &envblock, int &envc,
-	   bool no_envblock, HANDLE new_token)
+	   bool no_envblock, HANDLE new_token, bool keep_posix)
 {
   PWCHAR cwinenv = NULL;
   size_t winnum = 0;
@@ -1146,6 +1146,19 @@ build_env (const char * const *envp, PWCHAR &envblock, int &envc,
   for (srcp = envp, dstp = newenv, pass_dstp = pass_env; *srcp; srcp++)
     {
       bool calc_tl = !no_envblock;
+#ifdef __MSYS__
+      /* Don't pass timezone environment to non-msys applications */
+      if (!keep_posix && ascii_strncasematch(*srcp, "TZ=", 3))
+        {
+          const char *v = *srcp + 3;
+          if (*v == ':')
+            goto next1;
+          for (; *v; v++)
+            if (!isalpha(*v) && !isdigit(*v) &&
+                *v != '-' && *v != '+' && *v != ':')
+              goto next1;
+        }
+#endif
       /* Look for entries that require special attention */
       for (unsigned i = 0; i < SPENVS_SIZE; i++)
 	if (!saw_spenv[i] && (*dstp = spenvs[i].retrieve (no_envblock, *srcp)))
@@ -1266,6 +1279,15 @@ build_env (const char * const *envp, PWCHAR &envblock, int &envc,
 		  saw_PATH = true;
 		}
 	    }
+#ifdef __MSYS__
+	  else if (!keep_posix) {
+	    char *win_arg = arg_heuristic(*srcp);
+	    debug_printf("WIN32_PATH is %s", win_arg);
+	    p = cstrdup1(win_arg);
+	    if (win_arg != *srcp)
+	      free (win_arg);
+	  }
+#endif
 	  else
 	    p = *srcp;		/* Don't worry about it */
 
