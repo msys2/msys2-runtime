@@ -17,7 +17,7 @@ extern "C" {
 
 struct utsname
 {
-  char sysname[_UTSNAME_LENGTH];
+  char sysname[_UTSNAME_LENGTH + 1];
   char nodename[_UTSNAME_LENGTH];
   char release[_UTSNAME_LENGTH];
   char version[_UTSNAME_LENGTH];
