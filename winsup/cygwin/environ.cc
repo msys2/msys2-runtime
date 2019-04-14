@@ -777,6 +777,9 @@ static struct renv {
 } renv_arr[] = {
 	{ NL("COMMONPROGRAMFILES=") },		// 0
 	{ NL("COMSPEC=") },
+#ifdef __MSYS__
+	{ NL("MSYSTEM=") },			// 2
+#endif /* __MSYS__ */
 	{ NL("PATH=") },			// 2
 	{ NL("PROGRAMFILES=") },
 	{ NL("SYSTEMDRIVE=") },			// 4
@@ -788,10 +791,21 @@ static struct renv {
 #define RENV_SIZE (sizeof (renv_arr) / sizeof (renv_arr[0]))
 
 /* Set of first characters of the above list of variables. */
-static const char idx_arr[] = "CPSTW";
+static const char idx_arr[] =
+#ifdef __MSYS__
+	"CMPSTW";
+#else
+	"CPSTW";
+#endif
 /* Index into renv_arr at which the variables with this specific character
    starts. */
-static const int start_at[] = { 0, 2, 4, 6, 8 };
+static const int start_at[] = {
+#ifdef __MSYS__
+				0, 2, 3, 5, 7, 9
+#else
+				0, 2, 4, 6, 8
+#endif
+								};
 
 /* Turn environment variable part of a=b string into uppercase - for some
    environment variables only. */
@@ -991,6 +1005,7 @@ static NO_COPY spenv spenvs[] =
   {NL ("HOMEPATH="), false, false, &cygheap_user::env_homepath},
   {NL ("LOGONSERVER="), false, false, &cygheap_user::env_logsrv},
   {NL ("PATH="), false, true, NULL},
+  {NL ("MSYSTEM="), true, true, NULL},
   {NL ("SYSTEMDRIVE="), false, true, NULL},
   {NL ("SYSTEMROOT="), true, true, &cygheap_user::env_systemroot},
   {NL ("USERDOMAIN="), false, false, &cygheap_user::env_domain},
