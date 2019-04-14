@@ -36,7 +36,12 @@ uname_x (struct utsname *name)
 
       memset (name, 0, sizeof (*name));
       /* sysname */
-      __small_sprintf (name->sysname, "CYGWIN_%s-%u",
+      char* msystem = getenv("MSYSTEM");
+      const char* msystem_sysname = "MSYS";
+      if (msystem != NULL && *msystem && strcmp(msystem, "MSYS") != 0)
+        msystem_sysname = (strstr(msystem, "32") != NULL) ? "MINGW32" : "MINGW64";;
+      __small_sprintf (name->sysname, "%s_%s-%u",
+		       msystem_sysname,
 		       wincap.osname (), wincap.build_number ());
       /* nodename */
       memset (buf, 0, sizeof buf);
@@ -88,7 +93,7 @@ uname_x (struct utsname *name)
 /* Old entrypoint for applications up to API 334 */
 struct old_utsname
 {
-  char sysname[20];
+  char sysname[21];
   char nodename[20];
   char release[20];
   char version[20];
@@ -102,7 +107,15 @@ uname (struct utsname *in_name)
   __try
     {
       memset (name, 0, sizeof (*name));
+#ifdef __MSYS__
+      char* msystem = getenv("MSYSTEM");
+      const char* msystem_sysname = "MSYS";
+      if (msystem != NULL && *msystem && strcmp(msystem, "MSYS") != 0)
+        msystem_sysname = (strstr(msystem, "32") != NULL) ? "MINGW32" : "MINGW64";
+      __small_sprintf (name->sysname, "%s_%s", msystem_sysname, wincap.osname ());
+#else
       __small_sprintf (name->sysname, "CYGWIN_%s", wincap.osname ());
+#endif
 
       /* Computer name */
       cygwin_gethostname (name->nodename, sizeof (name->nodename) - 1);
