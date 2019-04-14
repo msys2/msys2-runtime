@@ -87,7 +87,11 @@ struct per_process_cxx_malloc __cygwin_cxx_malloc =
    and then jump to the dll.  */
 
 int __stdcall
+#ifdef __MSYS__
+_msys_crt0_common (MainFunc f, per_process *u)
+#else
 _cygwin_crt0_common (MainFunc f, per_process *u)
+#endif
 {
   per_process *newu = (per_process *) cygwin_internal (CW_USER_DATA);
   bool uwasnull;

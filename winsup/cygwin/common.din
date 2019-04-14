@@ -382,8 +382,8 @@ cygwin_attach_handle_to_fd SIGFE
 cygwin_conv_path SIGFE
 cygwin_conv_path_list SIGFE
 cygwin_create_path SIGFE
-cygwin_detach_dll SIGFE_MAYBE
-cygwin_dll_init NOSIGFE
+msys_detach_dll SIGFE_MAYBE
+msys_dll_init NOSIGFE
 cygwin_internal NOSIGFE
 cygwin_logon_user SIGFE
 cygwin_posix_path_list_p NOSIGFE

@@ -170,7 +170,7 @@ new (size_t)
       }
 
 #ifdef DEBUGGING
-  if (!getenv ("CYGWIN_FREERANGE_NOCHECK"))
+  if (!getenv ("MSYS_FREERANGE_NOCHECK"))
     api_fatal ("overflowed cygwin thread pool");
   else
     thread_printf ("overflowed cygwin thread pool");

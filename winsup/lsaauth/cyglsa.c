@@ -410,7 +410,7 @@ LsaApLogonUserEx (PLSA_CLIENT_REQUEST request, SECURITY_LOGON_TYPE logon_type,
 	  return stat;
 	}
 
-      memcpy (ts.SourceName, "Cygwin.1", 8);
+      memcpy (ts.SourceName, "MSYS.2", 6);
       ts.SourceIdentifier.HighPart = 0;
       ts.SourceIdentifier.LowPart = 0x0104;
       RtlInitEmptyUnicodeString (&flatnm, flatname,

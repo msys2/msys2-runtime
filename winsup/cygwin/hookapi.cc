@@ -401,7 +401,11 @@ hook_or_detect_cygwin (const char *name, const void *fn, WORD& subsys, HANDLE h)
   for (PIMAGE_IMPORT_DESCRIPTOR pd = pdfirst; pd->FirstThunk; pd++)
     {
       if (!ascii_strcasematch (rva (PSTR, map ?: (char *) hm, pd->Name - delta),
+#ifdef __MSYS__
+			       "msys-2.0.dll"))
+#else
 			       "cygwin1.dll"))
+#endif
       	continue;
       if (!fn)
 	{

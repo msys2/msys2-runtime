@@ -1,4 +1,4 @@
-LIBRARY "cygwin1.dll" BASE=0x180040000
+LIBRARY "msys-2.0.dll" BASE=0x180040000
 
 EXPORTS
 #Exported variables

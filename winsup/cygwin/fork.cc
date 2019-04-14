@@ -164,7 +164,7 @@ frok::child (volatile char * volatile here)
   char buf[80];
   /* This is useful for debugging fork problems.  Use gdb to attach to
      the pid reported here. */
-  if (GetEnvironmentVariableA ("CYGWIN_FORK_SLEEP", buf, sizeof (buf)))
+  if (GetEnvironmentVariableA ("MSYS_FORK_SLEEP", buf, sizeof (buf)))
     {
       small_printf ("Sleeping %d after fork, pid %u\n", atoi (buf), GetCurrentProcessId ());
       Sleep (atoi (buf));

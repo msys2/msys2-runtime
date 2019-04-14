@@ -35,7 +35,7 @@ BEGIN
       VALUE "InternalName", CYGWIN_DLL_NAME
       VALUE "LegalCopyright", "Copyright \251 Cygwin Authors 1996-" STRINGIFY(CYGWIN_BUILD_YEAR)
       VALUE "OriginalFilename", CYGWIN_DLL_NAME
-      VALUE "ProductName", "Cygwin"
+      VALUE "ProductName", "MSYS2"
       VALUE "ProductVersion", STRINGIFY(CYGWIN_VERSION)
       VALUE "APIVersion", CYGWIN_API_VERSION
       VALUE "SharedMemoryVersion", STRINGIFY(CYGWIN_VERSION_SHARED_DATA)

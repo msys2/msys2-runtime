@@ -974,9 +974,15 @@ handle_to_fn (HANDLE h, char *posix_fn)
       if (wcsncasecmp (w32, DEV_NAMED_PIPE, DEV_NAMED_PIPE_LEN) == 0)
 	{
 	  w32 += DEV_NAMED_PIPE_LEN;
+#ifdef __MSYS__
+	  if (wcsncmp (w32, L"msys-", WCLEN (L"msys-")) != 0)
+	    return false;
+	  w32 += WCLEN (L"msys-");
+#else
 	  if (wcsncmp (w32, L"cygwin-", WCLEN (L"cygwin-")) != 0)
 	    return false;
 	  w32 += WCLEN (L"cygwin-");
+#endif
 	  /* Check for installation key and trailing dash. */
 	  w32len = cygheap->installation_key.Length / sizeof (WCHAR);
 	  if (w32len

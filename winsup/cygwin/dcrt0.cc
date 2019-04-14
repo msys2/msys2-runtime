@@ -377,21 +377,21 @@ check_sanity_and_sync (per_process *p)
 
   /* Complain if older than last incompatible change */
   if (p->dll_major < CYGWIN_VERSION_DLL_EPOCH)
-    api_fatal ("cygwin DLL and APP are out of sync -- DLL version mismatch %u < %u",
+    api_fatal ("msys DLL and APP are out of sync -- DLL version mismatch %u < %u",
 	       p->dll_major, CYGWIN_VERSION_DLL_EPOCH);
 
   /* magic_biscuit != 0 if using the old style version numbering scheme.  */
   if (p->magic_biscuit != SIZEOF_PER_PROCESS)
-    api_fatal ("Incompatible cygwin .dll -- incompatible per_process info %u != %u",
+    api_fatal ("Incompatible msys .dll -- incompatible per_process info %u != %u",
 	       p->magic_biscuit, SIZEOF_PER_PROCESS);
 
   /* Complain if incompatible API changes made */
   if (p->api_major > cygwin_version.api_major)
-    api_fatal ("cygwin DLL and APP are out of sync -- API version mismatch %u > %u",
+    api_fatal ("msys DLL and APP are out of sync -- API version mismatch %u > %u",
 	       p->api_major, cygwin_version.api_major);
 
 #ifdef __i386__
-  /* This is a kludge to work around a version of _cygwin_common_crt0
+  /* This is a kludge to work around a version of _msys_common_crt0
      which overwrote the cxx_malloc field with the local DLL copy.
      Hilarity ensues if the DLL is not loaded while the process
      is forking. */
@@ -490,12 +490,12 @@ break_here ()
 static void
 initial_env ()
 {
-  if (GetEnvironmentVariableA ("CYGWIN_TESTING", NULL, 0))
+  if (GetEnvironmentVariableA ("MSYS_TESTING", NULL, 0))
     _cygwin_testing = 1;
 
 #ifdef DEBUGGING
   char buf[PATH_MAX];
-  if (GetEnvironmentVariableA ("CYGWIN_DEBUG", buf, sizeof (buf) - 1))
+  if (GetEnvironmentVariableA ("MSYS_DEBUG", buf, sizeof (buf) - 1))
     {
       char buf1[PATH_MAX];
       GetModuleFileName (NULL, buf1, PATH_MAX);
@@ -1105,7 +1105,11 @@ dll_crt0 (per_process *uptr)
    See winsup/testsuite/cygload for an example of how to use cygwin1.dll
    from MSVC and non-cygwin MinGW applications.  */
 extern "C" void
+#ifdef __MSYS__
+msys_dll_init ()
+#else
 cygwin_dll_init ()
+#endif
 {
 #ifdef __i386__
   static char **envp;
@@ -1318,7 +1322,7 @@ multiple_cygwin_problem (const char *what, uintptr_t magic_version, uintptr_t ve
       return;
     }
 
-  if (GetEnvironmentVariableA ("CYGWIN_MISMATCH_OK", NULL, 0))
+  if (GetEnvironmentVariableA ("MSYS_MISMATCH_OK", NULL, 0))
     return;
 
   if (CYGWIN_VERSION_MAGIC_VERSION (magic_version) == version)
@@ -1338,7 +1342,7 @@ are unable to find another cygwin DLL.",
 void __reg1
 cygbench (const char *s)
 {
-  if (GetEnvironmentVariableA ("CYGWIN_BENCH", NULL, 0))
+  if (GetEnvironmentVariableA ("MSYS_BENCH", NULL, 0))
     small_printf ("%05u ***** %s : %10d\n", GetCurrentProcessId (), s, strace.microseconds ());
 }
 #endif

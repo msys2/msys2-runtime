@@ -888,14 +888,22 @@ dll_dllcrt0_1 (VOID *x)
    future.  Cygwin can now handle being loaded from a noncygwin app
    using the same entry point. */
 extern "C" int
+#ifdef __MSYS__
+dll_nonmsys_dllcrt0 (HMODULE h, per_process *p)
+#else
 dll_noncygwin_dllcrt0 (HMODULE h, per_process *p)
+#endif
 {
   return (int) dll_dllcrt0 (h, p);
 }
 #endif /* __i386__ */
 
 extern "C" void
+#ifdef __MSYS__
+msys_detach_dll (dll *)
+#else
 cygwin_detach_dll (dll *)
+#endif
 {
   HANDLE retaddr;
   if (_my_tls.isinitialized ())

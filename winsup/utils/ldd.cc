@@ -246,7 +246,7 @@ tocyg (wchar_t *win_fn)
   return fn;
 }
 
-#define CYGWIN_DLL_LEN (wcslen (L"\\cygwin1.dll"))
+#define CYGWIN_DLL_LEN (wcslen (L"\\msys-2.0.dll"))
 static int
 print_dlls (dlls *dll, const wchar_t *dllfn, const wchar_t *process_fn)
 {

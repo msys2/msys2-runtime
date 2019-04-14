@@ -188,7 +188,7 @@ pinfo::maybe_set_exit_code_from_windows ()
       GetExitCodeProcess (hProcess, &x);
       set_exit_code (x);
     }
-  sigproc_printf ("pid %d, exit value - old %y, windows %y, cygwin %y",
+  sigproc_printf ("pid %d, exit value - old %y, windows %y, MSYS %y",
 		  self->pid, oexitcode, x, self->exitcode);
 }
 
