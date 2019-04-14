@@ -596,14 +596,14 @@ read_mounts ()
     }
   max_mount_entry = 0;
 
-  /* First fetch the cygwin1.dll path from the LoadLibrary call in load_cygwin.
-     This utilizes the DLL search order to find a matching cygwin1.dll and to
+  /* First fetch the msys-2.0.dll path from the LoadLibrary call in load_cygwin.
+     This utilizes the DLL search order to find a matching msys-2.0.dll and to
      compute the installation path from that DLL's path. */
   if (cygwin_dll_path[0])
     wcscpy (path, cygwin_dll_path);
-  /* If we can't load cygwin1.dll, check where cygcheck is living itself and
-     try to fetch installation path from here.  Does cygwin1.dll exist in the
-     same path?  This should only kick in if the cygwin1.dll in the same path
+  /* If we can't load msys-2.0.dll, check where cygcheck is living itself and
+     try to fetch installation path from here.  Does msys-2.0.dll exist in the
+     same path?  This should only kick in if the msys-2.0.dll in the same path
      has been made non-executable for the current user accidentally. */
   else if (!GetModuleFileNameW (NULL, path, 32768))
     return;
@@ -612,7 +612,7 @@ read_mounts ()
     {
       if (!cygwin_dll_path[0])
 	{
-	  wcscpy (path_end, L"\\cygwin1.dll");
+	  wcscpy (path_end, L"\\msys-2.0.dll");
 	  DWORD attr = GetFileAttributesW (path);
 	  if (attr == (DWORD) -1
 	      || (attr & (FILE_ATTRIBUTE_DIRECTORY

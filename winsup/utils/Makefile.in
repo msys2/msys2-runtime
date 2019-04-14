@@ -40,7 +40,7 @@ EXEEXT_FOR_BUILD:=@EXEEXT_FOR_BUILD@
 
 LDLIBS := -lnetapi32 -ladvapi32 -lkernel32 -luser32
 CYGWIN_LDFLAGS := -static -Wl,--enable-auto-import $(LDLIBS)
-DEP_LDLIBS := $(cygwin_build)/libcygwin.a
+DEP_LDLIBS := $(cygwin_build)/libmsys-2.0.a
 
 MINGW_CXX      := @MINGW_CXX@
 
@@ -91,8 +91,8 @@ cygcheck.exe: MINGW_LDFLAGS += ${ZLIB} -lwininet -lpsapi -lntdll
 cygcheck.exe: ${CYGCHECK_OBJS}
 
 cygpath.o: CXXFLAGS += -fno-threadsafe-statics
-cygpath.exe: CYGWIN_LDFLAGS += -lcygwin -luserenv -lntdll
-ps.exe: CYGWIN_LDFLAGS += -lcygwin -lpsapi -lntdll
+cygpath.exe: CYGWIN_LDFLAGS += -lmsys-2.0 -luserenv -lntdll
+ps.exe: CYGWIN_LDFLAGS += -lmsys-2.0 -lpsapi -lntdll
 strace.exe: MINGW_LDFLAGS += -lntdll
 
 ldd.exe:CYGWIN_LDFLAGS += -lpsapi -lntdll
