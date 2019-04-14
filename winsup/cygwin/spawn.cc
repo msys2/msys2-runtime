@@ -539,11 +539,13 @@ child_info_spawn::worker (const char *prog_arg, const char *const *argv,
       bool switch_user = ::cygheap->user.issetuid ()
 			 && (::cygheap->user.saved_uid
 			     != ::cygheap->user.real_uid);
+      bool keep_posix = (iscmd (argv[0], "strace.exe")
+			|| iscmd (argv[0], "strace")) ? true : real_path.iscygexec ();
       moreinfo->envp = build_env (envp, envblock, moreinfo->envc,
 				  real_path.iscygexec (),
 				  switch_user ? ::cygheap->user.primary_token ()
 					      : NULL,
-				  real_path.iscygexec ());
+				  keep_posix);
       if (!moreinfo->envp || !envblock)
 	{
 	  set_errno (E2BIG);
