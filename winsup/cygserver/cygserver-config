@@ -86,7 +86,7 @@ done
 
 # Check if running on NT
 _sys="`uname`"
-_nt=`expr "${_sys}" : "CYGWIN_NT"`
+_nt=`expr "${_sys}" : "MSYS_NT"`
 
 # Check for running cygserver processes first.
 if ps -ef | grep -v grep | grep -q ${service_name}
@@ -178,7 +178,7 @@ then
     echo "Do you want to install cygserver as service?"
     if request "(Say \"no\" if it's already installed as service)"
     then
-      if ! cygrunsrv -I ${service_name} -d "CYGWIN cygserver" -p /usr/sbin/cygserver
+      if ! cygrunsrv -I ${service_name} -d "MSYS cygserver" -p /usr/sbin/cygserver
       then
         echo
 	echo "Installation of cygserver as service failed.  Please check the"
