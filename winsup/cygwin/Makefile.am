@@ -37,12 +37,12 @@ newlib_build=$(target_builddir)/newlib
 toollibdir=$(tooldir)/lib
 toolincludedir=$(tooldir)/include
 
-# Parameters used in building the cygwin.dll.
+# Parameters used in building the msys-2.0.dll.
 
-DLL_NAME=cygwin1.dll
-NEW_DLL_NAME=new-cygwin1.dll
-DEF_FILE=cygwin.def
-LIB_NAME=libcygwin.a
+DLL_NAME=msys-2.0.dll
+NEW_DLL_NAME=new-msys-2.0.dll
+DEF_FILE=msys.def
+LIB_NAME=libmsys-2.0.a
 
 #
 # sources
@@ -584,16 +584,16 @@ LIBSERVER = $(cygserver_blddir)/libcygserver.a
 $(LIBSERVER):
 	$(MAKE) -C $(cygserver_blddir) libcygserver.a
 
-# We build as new-cygwin1.dll and rename at install time to overcome native
+# We build as new-msys-2.0.dll and rename at install time to overcome native
 # rebuilding issues (we don't want the build tools to see a partially built
-# cygwin1.dll and attempt to use it instead of the old one).
+# msys-2.0.dll and attempt to use it instead of the old one).
 
 # linker script
 LDSCRIPT=cygwin.sc
 $(LDSCRIPT): $(LDSCRIPT).in
 	$(AM_V_GEN)$(CC) -E - -P < $^ -o $@
 
-# cygwin dll
+# msys-2.0 dll
 # Set PE and export table header timestamps to zero for reproducible builds.
 $(NEW_DLL_NAME): $(LDSCRIPT) libdll.a $(VERSION_OFILES) $(LIBSERVER)\
 		  $(newlib_build)/libm.a $(newlib_build)/libc.a
@@ -602,18 +602,18 @@ $(NEW_DLL_NAME): $(LDSCRIPT) libdll.a $(VERSION_OFILES) $(LIBSERVER)\
 	-Wl,--gc-sections -nostdlib -Wl,-T$(LDSCRIPT) \
 	-Wl,--dynamicbase -static \
 	$${SOURCE_DATE_EPOCH:+-Wl,--no-insert-timestamp} \
-	-Wl,--heap=0 -Wl,--out-implib,cygdll.a -shared -o $@ \
+	-Wl,--heap=0 -Wl,--out-implib,msysdll.a -shared -o $@ \
 	-e @DLL_ENTRY@ $(DEF_FILE) \
 	-Wl,-whole-archive libdll.a -Wl,-no-whole-archive \
 	$(VERSION_OFILES) \
 	$(LIBSERVER) \
 	$(newlib_build)/libm.a \
 	$(newlib_build)/libc.a \
-	-lgcc -lkernel32 -lntdll -Wl,-Map,cygwin.map
+	-lgcc -lkernel32 -lntdll -Wl,-Map,msys.map
 	@$(MKDIR_P) ${target_builddir}/winsup/testsuite/testinst/bin/
 	$(AM_V_at)$(INSTALL_PROGRAM) $(NEW_DLL_NAME) ${target_builddir}/winsup/testsuite/testinst/bin/$(DLL_NAME)
 
-# cygwin import library
+# msys-2.0 import library
 toolopts=--cpu=@target_cpu@ --ar=@AR@ --as=@AS@ --nm=@NM@ --objcopy=@OBJCOPY@
 
 $(DEF_FILE): scripts/gendef cygwin.din
@@ -626,13 +626,14 @@ sigfe.s: $(DEF_FILE) tlsoffsets
 
 LIBCOS=$(addsuffix .o,$(basename $(LIB_FILES)))
 $(LIB_NAME): $(DEF_FILE) $(LIBCOS) | $(NEW_DLL_NAME)
-	$(AM_V_GEN)$(srcdir)/scripts/mkimport $(toolopts) $(NEW_FUNCTIONS) $@ cygdll.a $(wordlist 2,99,$^)
+	$(AM_V_GEN)$(srcdir)/scripts/mkimport $(toolopts) $(NEW_FUNCTIONS) $@ msysdll.a $(wordlist 2,99,$^)
 
 # sublibs
 # import libraries for some subset of symbols indicated by given objects
 speclib=\
 	$(srcdir)/scripts/speclib $(toolopts) \
 	--exclude='cygwin' \
+	--exclude='msys' \
 	--exclude='(?i:dll)' \
 	--exclude='reloc' \
 	--exclude='^main$$' \
@@ -679,7 +680,7 @@ all-local: $(LIB_NAME) $(SUBLIBS)
 clean-local:
 	-rm -f $(BUILT_SOURCES)
 	-rm -f $(DEF_FILE) sigfe.s
-	-rm -f cygwin.sc cygdll.a cygwin.map
+	-rm -f cygwin.sc msysdll.a msys.map
 	-rm -f $(NEW_DLL_NAME)
 	-rm -f $(LIB_NAME) $(SUBLIBS)
 	-rm -f version.cc
