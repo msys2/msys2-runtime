@@ -1722,6 +1722,173 @@ conv_path_list (const char *src, char *dst, size_t size,
 
 /********************** Symbolic Link Support **************************/
 
+static int
+recursiveCopyCheckSymlink(PUNICODE_STRING src, bool& isdirlink)
+{
+  path_conv pc (src, PC_SYM_NOFOLLOW|PC_SYM_NOFOLLOW_REP);
+  if (pc.error)
+    {
+      set_errno (pc.error);
+      return -1;
+    }
+  isdirlink = pc.issymlink ();
+  return 0;
+}
+
+/*
+  Create a deep copy of src as dst, while avoiding descending in origpath.
+*/
+static int
+recursiveCopy (PUNICODE_STRING src, PUNICODE_STRING dst, USHORT origsrclen,
+	       USHORT origdstlen, PWIN32_FIND_DATAW dHfile = NULL)
+{
+  HANDLE dH = INVALID_HANDLE_VALUE;
+  NTSTATUS status;
+  int srcpos = src->Length;
+  int dstpos = dst->Length;
+  int res = -1;
+  bool freedHfile = false;
+
+  if (!dHfile)
+    {
+      dHfile = (PWIN32_FIND_DATAW) cmalloc_abort (HEAP_STR, sizeof (*dHfile));
+      freedHfile = true;
+    }
+
+  debug_printf ("recursiveCopy (%S, %S)", src, dst);
+
+  /* Create the destination directory */
+  if (!CreateDirectoryExW (src->Buffer, dst->Buffer, NULL))
+    {
+      debug_printf ("CreateDirectoryExW(%S, %S, 0) failed", src, dst);
+      __seterrno ();
+      goto done;
+    }
+  /* Descend into the source directory */
+  if (src->Buffer[(src->Length - 1) / sizeof (WCHAR)] != L'\\')
+    {
+      status = RtlAppendUnicodeToString (src, L"\\*");
+    }
+  else
+    {
+      status = RtlAppendUnicodeToString (src, L"*");
+      srcpos -= sizeof (WCHAR);
+    }
+  if (!NT_SUCCESS (status))
+    {
+      __seterrno_from_nt_status (status);
+      goto done;
+    }
+  if (dst->Buffer[(dst->Length - 1) / sizeof (WCHAR)] != L'\\')
+      status = RtlAppendUnicodeToString (dst, L"\\");
+  else
+      dstpos -= sizeof (WCHAR);
+  if (!NT_SUCCESS (status))
+    {
+      __seterrno_from_nt_status (status);
+      goto done;
+    }
+
+  dH = FindFirstFileExW (src->Buffer, FindExInfoBasic, dHfile,
+			 FindExSearchNameMatch, NULL,
+			 FIND_FIRST_EX_LARGE_FETCH);
+  if (dH == INVALID_HANDLE_VALUE)
+    {
+      __seterrno ();
+      goto done;
+    }
+
+  do
+    {
+      bool isdirlink = false;
+      debug_printf ("dHfile: %W", dHfile->cFileName);
+      if (dHfile->cFileName[0] == L'.' &&
+	  (!dHfile->cFileName[1] ||
+	   (dHfile->cFileName[1] == L'.' && !dHfile->cFileName[2])))
+	continue;
+      /* Append the directory item filename to both source and destination */
+      src->Length = srcpos + sizeof (WCHAR);
+      dst->Length = dstpos + sizeof (WCHAR);
+      status = RtlAppendUnicodeToString (src, dHfile->cFileName);
+      if (!NT_SUCCESS (status))
+	{
+	  __seterrno_from_nt_status (status);
+	  goto done;
+	}
+      status = RtlAppendUnicodeToString (dst, dHfile->cFileName);
+      if (!NT_SUCCESS (status))
+	{
+	  __seterrno_from_nt_status (status);
+	  goto done;
+	}
+      debug_printf ("%S -> %S", src, dst);
+      if ((dHfile->dwFileAttributes &
+	    (FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_REPARSE_POINT)) ==
+	  (FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_REPARSE_POINT))
+	{
+	  /* I was really hoping to avoid using path_conv in the recursion,
+	     but maybe putting it in its own function will prevent it from
+	     taking up space in the stack frame */
+	  if (recursiveCopyCheckSymlink (src, isdirlink))
+	    goto done;
+	}
+      if (isdirlink)
+        {
+	  /* CreateDirectoryEx seems to "copy" directory reparse points, which
+	     CopyFileEx can only do with a flag introduced in 19041. */
+	  if (!CreateDirectoryExW (src->Buffer, dst->Buffer, NULL))
+	    {
+	      debug_printf ("CreateDirectoryExW(%S, %S, 0) failed", src, dst);
+	      __seterrno ();
+	      goto done;
+	    }
+	}
+      else if (dHfile->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+	{
+	  /* Recurse into the child directory */
+	  /* avoids endless recursion */
+	  if (src->Length <= origsrclen ||
+	      (!wcsncmp (src->Buffer, dst->Buffer, origdstlen / sizeof (WCHAR)) &&
+	       (!src->Buffer[origdstlen / sizeof (WCHAR)] ||
+		iswdirsep(src->Buffer[origdstlen / sizeof (WCHAR)]))))
+	    {
+	      set_errno (ELOOP);
+	      goto done;
+	    }
+	  if (recursiveCopy (src, dst, origsrclen, origdstlen, dHfile))
+	    goto done;
+	}
+      else
+	{
+	  /* Just copy the file */
+	  if (!CopyFileExW (src->Buffer, dst->Buffer, NULL, NULL, NULL,
+			    COPY_FILE_COPY_SYMLINK))
+	    {
+	      __seterrno ();
+	      goto done;
+	    }
+	}
+    }
+  while (FindNextFileW (dH, dHfile));
+
+  if (GetLastError() != ERROR_NO_MORE_FILES)
+    {
+      __seterrno ();
+      goto done;
+    }
+  res = 0;
+
+done:
+
+  if (dH != INVALID_HANDLE_VALUE)
+    FindClose (dH);
+
+  if (freedHfile)
+    cfree (dHfile);
+
+  return res;
+}
+
 /* Create a symlink from FROMPATH to TOPATH. */
 
 extern "C" int
@@ -2049,6 +2216,84 @@ symlink_wsl (const char *oldpath, path_conv &win32_newpath)
 }
 
 int
+symlink_deepcopy (const char *oldpath, path_conv &win32_newpath)
+{
+  tmp_pathbuf tp;
+  path_conv win32_oldpath;
+
+  resolve_symlink_target (oldpath, win32_newpath, win32_oldpath);
+  if (win32_oldpath.error)
+    {
+      set_errno (win32_oldpath.error);
+      return -1;
+    }
+  if (win32_oldpath.isspecial ())
+    return -2;
+
+  /* MSYS copy file instead make symlink */
+  /* As a MSYS limitation, the source path must exist. */
+  if (!win32_oldpath.exists ())
+    {
+      set_errno (ENOENT);
+      return -1;
+    }
+
+  PUNICODE_STRING w_oldpath = win32_oldpath.get_nt_native_path ();
+  PUNICODE_STRING w_newpath = win32_newpath.get_nt_native_path ();
+  if (w_oldpath->Buffer[1] == L'?')
+    w_oldpath->Buffer[1] = L'\\';
+  if (w_newpath->Buffer[1] == L'?')
+    w_newpath->Buffer[1] = L'\\';
+  if (win32_oldpath.isdir ())
+    {
+      /* we need a larger UNICODE_STRING MaximumLength than
+	 get_nt_native_path allocates for the recursive copy */
+      UNICODE_STRING u_oldpath, u_newpath;
+      RtlCopyUnicodeString (tp.u_get (&u_oldpath), w_oldpath);
+      RtlCopyUnicodeString (tp.u_get (&u_newpath), w_newpath);
+      return recursiveCopy (&u_oldpath, &u_newpath,
+			    u_oldpath.Length, u_newpath.Length);
+    }
+  else
+    {
+      bool isdirlink = false;
+      if (win32_oldpath.issymlink () &&
+	  win32_oldpath.is_known_reparse_point ())
+	{
+	  /* Is there a better way to know this? */
+	  DWORD attr = getfileattr (win32_oldpath.get_win32 (),
+				    !!win32_oldpath.objcaseinsensitive ());
+	  if (attr == INVALID_FILE_ATTRIBUTES)
+	    {
+	      __seterrno ();
+	      return -1;
+	    }
+	  isdirlink = attr & FILE_ATTRIBUTE_DIRECTORY;
+	}
+      if (isdirlink)
+        {
+	  /* CreateDirectoryEx seems to "copy" directory reparse points, which
+	     CopyFileEx can only do with a flag introduced in 19041. */
+	  if (!CreateDirectoryExW (w_oldpath->Buffer, w_newpath->Buffer, NULL))
+	    {
+	      debug_printf ("CreateDirectoryExW(%S, %S, 0) failed", w_oldpath,
+			    w_newpath);
+	      __seterrno ();
+	      return -1;
+	    }
+	}
+      else if (!CopyFileExW (w_oldpath->Buffer, w_newpath->Buffer, NULL, NULL,
+			NULL, COPY_FILE_COPY_SYMLINK))
+	{
+	  __seterrno ();
+	  return -1;
+	}
+    }
+
+  return 0;
+}
+
+int
 symlink_worker (const char *oldpath, path_conv &win32_newpath, bool isdevice)
 {
   int res = -1;
@@ -2115,6 +2360,13 @@ symlink_worker (const char *oldpath, path_conv &win32_newpath, bool isdevice)
 	case WSYM_nfs:
 	  res = symlink_nfs (oldpath, win32_newpath);
 	  __leave;
+	case WSYM_deepcopy:
+	  res = symlink_deepcopy (oldpath, win32_newpath);
+	  if (!res || res == -1)
+	    __leave;
+	  /* fall back to sysfile symlink type */
+	  wsym_type = WSYM_sysfile;
+	  break;
 	case WSYM_native:
 	case WSYM_nativestrict:
 	  res = symlink_native (oldpath, win32_newpath);
