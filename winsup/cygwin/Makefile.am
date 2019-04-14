@@ -283,6 +283,7 @@ DLL_FILES= \
 	mmap.cc \
 	mmap_alloc.cc \
 	msg.cc \
+	msys2_path_conv.cc \
 	mount.cc \
 	net.cc \
 	netdb.cc \
