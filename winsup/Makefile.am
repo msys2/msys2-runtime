@@ -8,7 +8,7 @@
 
 # This makefile requires GNU make.
 
-cygdocdir = $(datarootdir)/doc/Cygwin
+cygdocdir = $(datarootdir)/doc/Msys
 
 cygdoc_DATA = \
 	CYGWIN_LICENSE \
