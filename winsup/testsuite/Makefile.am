@@ -343,7 +343,7 @@ XFAIL_TESTS = \
 # cygrun.sh test-runner script, and variables used by it:
 LOG_COMPILER = $(srcdir)/cygrun.sh
 
-export runtime_root=$(abs_builddir)/testinst/bin
+export runtime_root=$(abs_builddir)/testinst/usr/bin
 export cygrun=$(builddir)/mingw/cygrun
 
 # Set up things in the Cygwin 'installation' at testsuite/testinst/ to provide
@@ -365,9 +365,9 @@ export cygrun=$(builddir)/mingw/cygrun
 
 check-local:
 	$(MKDIR_P) ${builddir}/testinst/tmp
-	cd ${builddir}/testinst/bin && cp /usr/libexec/busybox/bin/busybox.exe sh.exe
-	cd ${builddir}/testinst/bin && cp /usr/libexec/busybox/bin/busybox.exe sleep.exe
-	cd ${builddir}/testinst/bin && cp /usr/libexec/busybox/bin/busybox.exe ls.exe
+	cd ${builddir}/testinst/usr/bin && cp /usr/bin/busybox.exe sh.exe
+	cd ${builddir}/testinst/usr/bin && cp /usr/bin/busybox.exe sleep.exe
+	cd ${builddir}/testinst/usr/bin && cp /usr/bin/busybox.exe ls.exe
 
 # target to build all the programs needed by check, without running check
 check_programs: $(check_PROGRAMS)
