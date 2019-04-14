@@ -284,7 +284,7 @@ load_cygwin ()
   if (h)
     return 0;
 
-  if (!(h = LoadLibrary ("cygwin1.dll")))
+  if (!(h = LoadLibrary ("msys-2.0.dll")))
     {
       errno = ENOENT;
       return 0;

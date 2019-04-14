@@ -779,7 +779,7 @@ dll_info (const char *path, HANDLE fh, int lvl, int recurse)
 	    }
 	}
     }
-  if (strstr (path, "\\cygwin1.dll"))
+  if (strstr (path, "\\msys-2.0.dll"))
     cygwin_info (fh);
 }
 
@@ -1330,7 +1330,7 @@ handle_reg_installation (handle_reg_t what)
 	      if (what == PRINT_KEY)
 		printf ("  %s Key: %s Path: %s", i ? "User:  " : "System:",
 			name, path);
-	      strcat (path, "\\bin\\cygwin1.dll");
+	      strcat (path, "\\bin\\msys-2.0.dll");
 	      if (what == PRINT_KEY)
 		printf ("%s\n", access (path, F_OK) ? " (ORPHANED)" : "");
 	      else if (access (path, F_OK))
@@ -1979,10 +1979,10 @@ dump_sysinfo ()
 	  wcstombs (f, ffinfo.cFileName, sizeof f);
 	  if (strcasecmp (f + strlen (f) - 4, ".dll") == 0)
 	    {
-	      if (strncasecmp (f, "cyg", 3) == 0)
+	      if (strncasecmp (f, "msys-", 5) == 0)
 		{
 		  sprintf (tmp, "%s%s", pth->dir, f);
-		  if (strcasecmp (f, "cygwin1.dll") == 0)
+		  if (strcasecmp (f, "msys-2.0.dll") == 0)
 		    {
 		      if (!cygwin_dll_count)
 			strcpy (cygdll_path, pth->dir);
@@ -2006,9 +2006,9 @@ dump_sysinfo ()
       FindClose (ff);
     }
   if (cygwin_dll_count > 1)
-    puts ("Warning: There are multiple cygwin1.dlls on your path");
+    puts ("Warning: There are multiple msys-2.0.dlls on your path");
   if (!cygwin_dll_count)
-    puts ("Warning: cygwin1.dll not found on your path");
+    puts ("Warning: msys-2.0.dll not found on your path");
 
   dump_dodgy_apps (verbose);
 
@@ -3022,7 +3022,7 @@ load_cygwin (int& argc, char **&argv)
 {
   HMODULE h;
 
-  if (!(h = LoadLibrary ("cygwin1.dll")))
+  if (!(h = LoadLibrary ("msys-2.0.dll")))
     return;
   GetModuleFileNameW (h, cygwin_dll_path, 32768);
   if ((cygwin_internal = (uintptr_t (*) (cygwin_getinfo_types, ...))
