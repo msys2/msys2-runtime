@@ -46,7 +46,7 @@ libcygserver_a_SOURCES = \
 
 libcygserver_a_CXXFLAGS = $(cygserver_flags)
 
-cygdocdir = $(datarootdir)/doc/Cygwin
+cygdocdir = $(datarootdir)/doc/Msys
 
 install-data-local:
 	@$(MKDIR_P) $(DESTDIR)$(cygdocdir)
