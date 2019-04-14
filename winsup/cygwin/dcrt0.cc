@@ -1077,7 +1077,11 @@ dll_crt0 (per_process *uptr)
    See winsup/testsuite/cygload for an example of how to use cygwin1.dll
    from MSVC and non-cygwin MinGW applications.  */
 extern "C" void
+#ifdef __MSYS__
+msys_dll_init ()
+#else
 cygwin_dll_init ()
+#endif
 {
   static int _fmode;
 
