@@ -913,7 +913,16 @@ win32env_to_cygenv (PWCHAR rawenv, bool posify)
       char *eq = strchrnul (newp, '=');
       ucenv (newp, eq);    /* uppercase env vars which need it */
       if (*newp == 'T' && strncmp (newp, "TERM=", 5) == 0)
-        sawTERM = 1;
+	    {
+	      /* backwards compatibility: override TERM=msys by TERM=cygwin */
+	      if (strcmp (newp + 5, "msys") == 0)
+		{
+		  free(newp);
+		  i--;
+		  continue;
+		}
+	      sawTERM = 1;
+	    }
 #ifdef __MSYS__
       else if (*newp == 'M' && strncmp (newp, "MSYS=", 5) == 0)
         parse_options (newp + 5);
