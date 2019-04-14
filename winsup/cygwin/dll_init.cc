@@ -874,7 +874,11 @@ dll_dllcrt0_1 (VOID *x)
 }
 
 extern "C" void
+#ifdef __MSYS__
+msys_detach_dll (dll *)
+#else
 cygwin_detach_dll (dll *)
+#endif
 {
   HANDLE retaddr;
   if (_my_tls.isinitialized ())

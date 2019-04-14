@@ -76,7 +76,7 @@ namespace cygwin
   // spawns a thread to let you receive signals from cygwin.
   class connector {
   public:
-    connector (const char *dll = "cygwin1.dll");
+    connector (const char *dll = "msys-2.0.dll");
     ~connector ();
 
     // A wrapper around GetProcAddress() for fetching symbols from the

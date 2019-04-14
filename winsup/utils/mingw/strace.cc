@@ -284,7 +284,7 @@ load_cygwin ()
   if (h)
     return 0;
 
-  if (!(h = LoadLibrary ("cygwin1.dll")))
+  if (!(h = LoadLibrary ("msys-2.0.dll")))
     {
       errno = ENOENT;
       return 0;
@@ -354,17 +354,16 @@ create_child (char **argv)
   make_command_line (one_line, argv);
 
   SetConsoleCtrlHandler (NULL, 0);
-
-  const char *cygwin_env = getenv ("CYGWIN");
+  const char *cygwin_env = getenv ("MSYS");
   const char *space;
 
   if (cygwin_env && strlen (cygwin_env) <= 256) /* sanity check */
     space = " ";
   else
     space = cygwin_env = "";
-  char *newenv = (char *) malloc (sizeof ("CYGWIN=noglob")
+  char *newenv = (char *) malloc (sizeof ("MSYS=noglob")
 				  + strlen (space) + strlen (cygwin_env));
-  sprintf (newenv, "CYGWIN=noglob%s%s", space, cygwin_env);
+  sprintf (newenv, "MSYS=noglob%s%s", space, cygwin_env);
   _putenv (newenv);
   ret = CreateProcess (0, one_line.buf,	/* command line */
 		       NULL,	/* Security */

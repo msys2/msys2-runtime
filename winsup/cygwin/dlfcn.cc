@@ -147,8 +147,13 @@ collect_basenames (pathfinder::basenamelist & basenames,
   /* If the basename starts with "lib", ... */
   if (!strncmp (basename, "lib", 3))
     {
+#ifdef __MSYS__
+      /* ... replace "lib" with "msys-", before ... */
+      basenames.appendv ("msys-", 5, basename+3, baselen-3, ext, extlen, NULL);
+#else
       /* ... replace "lib" with "cyg", before ... */
       basenames.appendv ("cyg", 3, basename+3, baselen-3, ext, extlen, NULL);
+#endif
     }
   /* ... using original basename with new suffix. */
   basenames.appendv (basename, baselen, ext, extlen, NULL);
