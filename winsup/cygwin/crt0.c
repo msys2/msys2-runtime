@@ -14,7 +14,11 @@ details. */
 
 extern int main (int argc, char **argv);
 
+#ifdef __MSYS__
+void msys_crt0 (int (*main) (int, char **));
+#else
 void cygwin_crt0 (int (*main) (int, char **));
+#endif
 
 #ifdef __i386__
 __attribute__ ((force_align_arg_pointer))
@@ -22,7 +26,11 @@ __attribute__ ((force_align_arg_pointer))
 void
 mainCRTStartup ()
 {
+#ifdef __MSYS__
+  msys_crt0 (main);
+#else
   cygwin_crt0 (main);
+#endif
 
   /* These are never actually called.  They are just here to force the inclusion
      of things like -lbinmode.  */
