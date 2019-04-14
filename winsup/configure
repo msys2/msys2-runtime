@@ -681,7 +681,7 @@ CXX
 CXXFLAGS
 CCC
 CPP'
-ac_subdirs_all='cygwin cygserver doc
+ac_subdirs_all='cygwin cygserver
 utils'
 
 # Initialize some variables set by options.
@@ -3449,7 +3449,7 @@ export CXX
 
 
 
-subdirs="$subdirs cygwin cygserver doc"
+subdirs="$subdirs cygwin cygserver"
 
 if test "x$with_cross_bootstrap" != "xyes"; then
     subdirs="$subdirs utils"

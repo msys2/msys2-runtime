@@ -109,7 +109,7 @@ hardcode_direct=no
 hardcode_minus_L=no
 
 case "$host_os" in
-  cygwin* | mingw* | pw32*)
+  cygwin* | msys* | mingw* | pw32*)
     # FIXME: the MSVC++ port hasn't been tested in a loooong time
     # When not using gcc, we currently assume that we are using
     # Microsoft Visual C++.
@@ -149,7 +149,7 @@ if test "$with_gnu_ld" = yes; then
         ld_shlibs=no
       fi
       ;;
-    cygwin* | mingw* | pw32*)
+    cygwin* | msys* | mingw* | pw32*)
       # hardcode_libdir_flag_spec is actually meaningless, as there is
       # no search path for DLLs.
       hardcode_libdir_flag_spec='-L$libdir'
@@ -268,7 +268,7 @@ else
       ;;
     bsdi4*)
       ;;
-    cygwin* | mingw* | pw32*)
+    cygwin* | msys* | mingw* | pw32*)
       # When not using gcc, we currently assume that we are using
       # Microsoft Visual C++.
       # hardcode_libdir_flag_spec is actually meaningless, as there is
@@ -437,7 +437,7 @@ case "$host_os" in
     ;;
   bsdi4*)
     ;;
-  cygwin* | mingw* | pw32*)
+  cygwin* | msys* | mingw* | pw32*)
     shrext=.dll
     ;;
   darwin* | rhapsody*)

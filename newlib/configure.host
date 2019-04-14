@@ -188,7 +188,7 @@ case "${host_cpu}" in
   i[34567]86)
 	# Don't use for these since they provide their own setjmp.
 	case ${host} in
-	*-*-sco* | *-*-cygwin*) 
+	*-*-sco* | *-*-cygwin* | *-*-msys*)
 		libm_machine_dir=i386
 		machine_dir=i386
 		;;
@@ -382,7 +382,7 @@ fi
 
 if [ "x${newlib_mb}" = "x" ]; then
 	case "${host}" in
-  	  i[34567]86-pc-linux-*|*-*-cygwin*)
+  	  i[34567]86-pc-linux-*|*-*-cygwin*|*-*-msys*)
 		newlib_mb=yes
 	  	;;
 	esac
@@ -416,7 +416,7 @@ esac
 # THIS TABLE IS ALPHA SORTED.  KEEP IT THAT WAY.
 
 case "${host}" in
-  *-*-cygwin*)
+  *-*-cygwin* | *-*-msys*)
 	posix_dir=posix
 	stdio64_dir=stdio64
 	xdr_dir=xdr
@@ -620,7 +620,7 @@ esac
 # THIS TABLE IS ALPHA SORTED.  KEEP IT THAT WAY.
 
 case "${host}" in
-  *-*-cygwin*)
+  *-*-cygwin* | *-*-msys*)
 	test -z "$cygwin_srcdir" && cygwin_srcdir=`cd ${srcdir}/../winsup/cygwin; pwd`
 	export cygwin_srcdir
 	default_newlib_io_c99_formats="yes"
