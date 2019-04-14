@@ -56,6 +56,10 @@ class av
 	calloced = 1;
       }
   }
+  void replace (int i, const char *arg)
+  {
+    argv[i] = cstrdup1 (arg);
+  }
   void dup_all ()
   {
     for (int i = calloced; i < argc; i++)
