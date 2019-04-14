@@ -179,14 +179,22 @@ init_cygheap::init_installation_root ()
 
   /* Strip off last path component ("\\cygwin1.dll") */
   PWCHAR w = wcsrchr (installation_root_buf, L'\\');
+#ifdef __MSYS__
+  /* Back two folders to get root as we have all stuff in usr subfolder */
+  for (int i=1; i >=0; --i)
+  {
+#endif
   if (w)
     {
       *w = L'\0';
       w = wcsrchr (installation_root_buf, L'\\');
     }
   if (!w)
-    api_fatal ("Can't initialize Cygwin installation root dir.\n"
+    api_fatal ("Can't initialize MSYS2 installation root dir.\n"
 	       "Invalid DLL path");
+#ifdef __MSYS__
+  }
+#endif
 
   /* Copy result into installation_dir before stripping off "bin" dir and
      revert to Win32 path.  This path is added to the Windows environment
@@ -211,6 +219,7 @@ init_cygheap::init_installation_root ()
   RtlInitUnicodeString (&installation_root, installation_root_buf);
   RtlInitUnicodeString (&installation_dir, installation_dir_buf);
 
+#ifndef __MSYS__
   for (int i = 1; i >= 0; --i)
     {
       reg_key r (i, KEY_WRITE, _WIDE (CYGWIN_INFO_INSTALLATIONS_NAME),
@@ -219,6 +228,7 @@ init_cygheap::init_installation_root ()
 				    installation_root_buf)))
 	break;
     }
+#endif
 }
 
 void __stdcall

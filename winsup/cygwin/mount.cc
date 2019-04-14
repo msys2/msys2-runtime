@@ -39,7 +39,6 @@ details. */
   (path_prefix_p (proc, (path), proc_len, false))
 
 bool NO_COPY mount_info::got_usr_bin;
-bool NO_COPY mount_info::got_usr_lib;
 int NO_COPY mount_info::root_idx = -1;
 
 /* is_unc_share: Return non-zero if PATH begins with //server/share
@@ -332,7 +331,6 @@ fs_info::update (PUNICODE_STRING upath, HANDLE in_vol)
 #define MINIMAL_WIN_NTFS_FLAGS (FILE_CASE_SENSITIVE_SEARCH \
 				| FILE_CASE_PRESERVED_NAMES \
 				| FILE_UNICODE_ON_DISK \
-				| FILE_PERSISTENT_ACLS \
 				| FILE_FILE_COMPRESSION \
 				| FILE_VOLUME_QUOTAS \
 				| FILE_SUPPORTS_SPARSE_FILES \
@@ -473,13 +471,13 @@ mount_info::create_root_entry (const PWCHAR root)
   sys_wcstombs (native_root, PATH_MAX, root);
   assert (*native_root != '\0');
   if (add_item (native_root, "/",
-		MOUNT_SYSTEM | MOUNT_IMMUTABLE | MOUNT_AUTOMATIC)
+		MOUNT_SYSTEM | MOUNT_IMMUTABLE | MOUNT_AUTOMATIC | MOUNT_NOACL)
       < 0)
     api_fatal ("add_item (\"%s\", \"/\", ...) failed, errno %d", native_root, errno);
   /* Create a default cygdrive entry.  Note that this is a user entry.
      This allows to override it with mount, unless the sysadmin created
      a cygdrive entry in /etc/fstab. */
-  cygdrive_flags = MOUNT_NOPOSIX | MOUNT_CYGDRIVE;
+  cygdrive_flags = MOUNT_NOPOSIX | MOUNT_CYGDRIVE | MOUNT_NOACL;
   strcpy (cygdrive, CYGWIN_INFO_CYGDRIVE_DEFAULT_PREFIX "/");
   cygdrive_len = strlen (cygdrive);
 }
@@ -499,22 +497,14 @@ mount_info::init (bool user_init)
   pathend = wcpcpy (pathend, L"\\etc\\fstab");
   from_fstab (user_init, path, pathend);
 
-  if (!user_init && (!got_usr_bin || !got_usr_lib))
+  if (!user_init && !got_usr_bin)
     {
       char native[PATH_MAX];
       if (root_idx < 0)
-	api_fatal ("root_idx %d, user_shared magic %y, nmounts %d", root_idx, user_shared->version, nmounts);
+        api_fatal ("root_idx %d, user_shared magic %y, nmounts %d", root_idx, user_shared->version, nmounts);
       char *p = stpcpy (native, mount[root_idx].native_path);
-      if (!got_usr_bin)
-      {
-	stpcpy (p, "\\bin");
-	add_item (native, "/usr/bin", MOUNT_SYSTEM | MOUNT_AUTOMATIC);
-      }
-      if (!got_usr_lib)
-      {
-	stpcpy (p, "\\lib");
-	add_item (native, "/usr/lib", MOUNT_SYSTEM | MOUNT_AUTOMATIC);
-      }
+      stpcpy (p, "\\usr\\bin");
+      add_item (native, "/bin", MOUNT_SYSTEM | MOUNT_AUTOMATIC | MOUNT_NOACL);
     }
 }
 
@@ -595,6 +585,7 @@ mount_info::conv_to_win32_path (const char *src_path, char *dst, device& dev,
   /* See if this is a cygwin "device" */
   if (win32_device_name (src_path, dst, dev))
     {
+      debug_printf ("win32_device_name (%s)", src_path);
       *flags = 0;
       rc = 0;
       goto out_no_chroot_check;
@@ -625,6 +616,7 @@ mount_info::conv_to_win32_path (const char *src_path, char *dst, device& dev,
     }
   if (isproc (src_path))
     {
+      debug_printf ("isproc (%s)", src_path);
       dev = *proc_dev;
       dev = fhandler_proc::get_proc_fhandler (src_path);
       if (dev == FH_NADA)
@@ -646,6 +638,7 @@ mount_info::conv_to_win32_path (const char *src_path, char *dst, device& dev,
      off the prefix and transform it into an MS-DOS path. */
   else if (iscygdrive (src_path))
     {
+      debug_printf ("iscygdrive (%s) mount_table->cygdrive %s", src_path, mount_table->cygdrive);
       int n = mount_table->cygdrive_len - 1;
       int unit;
 
@@ -657,11 +650,15 @@ mount_info::conv_to_win32_path (const char *src_path, char *dst, device& dev,
 	}
       else if (cygdrive_win32_path (src_path, dst, unit))
 	{
+	  debug_printf ("cygdrive_win32_path (%s)", src_path);
 	  *flags = cygdrive_flags;
 	  goto out;
 	}
       else if (mount_table->cygdrive_len > 1)
-	return ENOENT;
+      {
+		debug_printf ("mount_table->cygdrive_len > 1 (%s)", src_path);
+		return ENOENT;
+      }
     }
 
   int chroot_pathlen;
@@ -672,7 +669,9 @@ mount_info::conv_to_win32_path (const char *src_path, char *dst, device& dev,
       const char *path;
       int len;
 
-      mi = mount + posix_sorted[i];
+      mi = mount + shortest_native_sorted[i];
+      debug_printf (" mount[%d] .. checking %s -> %s ", i, mi->posix_path, mi->native_path);
+
       if (!cygheap->root.exists ()
 	  || (mi->posix_pathlen == 1 && mi->posix_path[0] == '/'))
 	{
@@ -903,7 +902,8 @@ mount_info::conv_to_posix_path (const char *src_path, char *posix_path,
   int pathbuflen = tail - pathbuf;
   for (int i = 0; i < nmounts; ++i)
     {
-      mount_item &mi = mount[native_sorted[i]];
+      mount_item &mi = mount[longest_posix_sorted[i]];
+      debug_printf (" mount[%d] .. checking %s -> %s ", i, mi.posix_path, mi.native_path);
       if (!path_prefix_p (mi.native_path, pathbuf, mi.native_pathlen,
 			  mi.flags & MOUNT_NOPOSIX))
 	continue;
@@ -1116,8 +1116,17 @@ mount_info::from_fstab_line (char *line, bool user)
   if (!*c)
     return true;
   cend = find_ws (c);
-  *cend = '\0';
   posix_path = conv_fstab_spaces (c);
+  if (!*cend)
+   {
+     unsigned mount_flags = MOUNT_SYSTEM | MOUNT_NOPOSIX | MOUNT_NOACL;
+
+     int res = mount_table->add_item (native_path, posix_path, mount_flags);
+     if (res && get_errno () == EMFILE)
+       return false;
+     return true;
+   }
+  *cend = '\0';
   /* Third field: FS type. */
   c = skip_ws (cend + 1);
   if (!*c)
@@ -1346,16 +1355,145 @@ sort_by_native_name (const void *a, const void *b)
   return res;
 }
 
+/* sort_by_longest_posix_name: qsort callback to sort the mount entries.
+   Sort user mounts ahead of system mounts to the same POSIX path. */
+/* FIXME: should the user should be able to choose whether to
+   prefer user or system mounts??? */
+static int
+sort_by_longest_posix_name (const void *a, const void *b)
+{
+  mount_item *ap = mounts_for_sort + (*((int*) a));
+  mount_item *bp = mounts_for_sort + (*((int*) b));
+
+  /* Base weighting on the conversion that would give the longest
+     posix path. */
+  ssize_t alen = (ssize_t) strlen (ap->posix_path) - (ssize_t) strlen (ap->native_path);
+  ssize_t blen = (ssize_t) strlen (bp->posix_path) - (ssize_t) strlen (bp->native_path);
+
+  int res = blen - alen;
+
+  if (res)
+    return res;		/* Path lengths differed */
+
+  /* The two paths were the same length, so just determine normal
+     lexical sorted order. */
+  res = strcmp (ap->posix_path, bp->posix_path);
+
+  if (res == 0)
+   {
+     /* need to select between user and system mount to same POSIX path */
+     if (!(bp->flags & MOUNT_SYSTEM))	/* user mount */
+      return 1;
+     else
+      return -1;
+   }
+
+  return res;
+}
+
+/* sort_by_shortest_native_name: qsort callback to sort the mount entries.
+   Sort user mounts ahead of system mounts to the same POSIX path. */
+/* FIXME: should the user should be able to choose whether to
+   prefer user or system mounts??? */
+static int
+sort_by_shortest_native_name (const void *a, const void *b)
+{
+  mount_item *ap = mounts_for_sort + (*((int*) a));
+  mount_item *bp = mounts_for_sort + (*((int*) b));
+
+  /* Base weighting on the conversion that would give the shortest
+     native path. */
+  ssize_t alen = (ssize_t) strlen (ap->native_path);
+  ssize_t blen = (ssize_t) strlen (bp->native_path);
+
+  int res = alen - blen;
+
+  if (res)
+    return res;		/* Path lengths differed */
+
+  /* The two paths were the same length, so just determine normal
+     lexical sorted order. */
+  res = strcmp (ap->native_path, bp->native_path);
+
+  if (res == 0)
+   {
+     /* need to select between user and system mount to same POSIX path */
+     if (!(bp->flags & MOUNT_SYSTEM))	/* user mount */
+      return 1;
+     else
+      return -1;
+   }
+
+  return res;
+}
+
+static int
+sort_posix_subdirs_before_parents (const void *a, const void *b)
+{
+    mount_item *ap = mounts_for_sort + (*((int*) a));
+    mount_item *bp = mounts_for_sort + (*((int*) b));
+
+    if (ap->posix_pathlen > bp->posix_pathlen)
+    {
+        if (!memcmp (bp->posix_path, ap->posix_path, bp->posix_pathlen))
+        {
+            // bp is a subdir of ap (bp must be moved in-front)
+            return -1;
+        }
+    }
+    else if (ap->posix_pathlen < bp->posix_pathlen)
+    {
+        if (!memcmp (ap->posix_path, bp->posix_path, ap->posix_pathlen))
+        {
+            // ap is a subdir of bp (good as we are)
+            return 1;
+        }
+    }
+    return 0;
+}
+
+#define DISABLE_NEW_STUFF 0
+#define ONLY_USE_NEW_STUFF 1
+
 void
 mount_info::sort ()
 {
   for (int i = 0; i < nmounts; i++)
-    native_sorted[i] = posix_sorted[i] = i;
+    native_sorted[i] = posix_sorted[i] = shortest_native_sorted[i] = longest_posix_sorted[i] = i;
   /* Sort them into reverse length order, otherwise we won't
      be able to look for /foo in /.  */
   mounts_for_sort = mount;	/* ouch. */
   qsort (posix_sorted, nmounts, sizeof (posix_sorted[0]), sort_by_posix_name);
   qsort (native_sorted, nmounts, sizeof (native_sorted[0]), sort_by_native_name);
+  qsort (longest_posix_sorted, nmounts, sizeof (longest_posix_sorted[0]), sort_by_longest_posix_name);
+  qsort (shortest_native_sorted, nmounts, sizeof (shortest_native_sorted[0]), sort_by_shortest_native_name);
+  qsort (shortest_native_sorted, nmounts, sizeof (shortest_native_sorted[0]), sort_posix_subdirs_before_parents);
+  /* Disabling my new crap. */
+  #if DISABLE_NEW_STUFF
+  for (int i = 0; i < nmounts; i++)
+  {
+      longest_posix_sorted[i] = native_sorted[i];
+      shortest_native_sorted[i] = posix_sorted[i];
+  }
+  #else
+  #if ONLY_USE_NEW_STUFF
+  for (int i = 0; i < nmounts; i++)
+  {
+      native_sorted[i] = longest_posix_sorted[i];
+      posix_sorted[i] = shortest_native_sorted[i];
+  }
+  #endif
+  #endif
+  for (int i = 0; i < nmounts; i++)
+  {
+      mount_item *mi = mount + shortest_native_sorted[i];
+      debug_printf ("shortest_native_sorted (subdirs before parents)[%d] %12s       %12s", i, mi->native_path, mi->posix_path);
+  }
+  for (int i = 0; i < nmounts; i++)
+  {
+      mount_item *mi = mount + longest_posix_sorted[i];
+      debug_printf ("longest_posix_sorted[%d] %12s       %12s", i, mi->native_path, mi->posix_path);
+  }
 }
 
 /* Add an entry to the mount table.
@@ -1446,11 +1584,8 @@ mount_info::add_item (const char *native, const char *posix,
   if (i == nmounts)
     nmounts++;
 
-  if (strcmp (posixtmp, "/usr/bin") == 0)
+  if (strcmp (posixtmp, "/bin") == 0)
     got_usr_bin = true;
-
-  if (strcmp (posixtmp, "/usr/lib") == 0)
-    got_usr_lib = true;
 
   if (posixtmp[0] == '/' && posixtmp[1] == '\0' && !(mountflags & MOUNT_CYGDRIVE))
     root_idx = i;
