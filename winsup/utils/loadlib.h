@@ -13,7 +13,7 @@
 #include <wchar.h>
 
 /* Load all system libs from the windows system directory by prepending the
-   full path.  This doesn't work for loadling cygwin1.dll.  For this case,
+   full path.  This doesn't work for loadling msys-2.0.dll.  For this case,
    instead of prepending the path, make sure that the CWD is removed from
    the DLL search path, if possible (XP SP1++, Vista++). */
 static HMODULE _load_sys_library (const wchar_t *dll) __attribute__ ((used));
@@ -45,8 +45,8 @@ _load_sys_library (const wchar_t *dll)
       	set_dll_directory (L"");
     }
 
-  if (wcscmp (dll, L"cygwin1.dll") == 0)
-    return LoadLibraryExW (L"cygwin1.dll", NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+  if (wcscmp (dll, L"msys-2.0.dll") == 0)
+    return LoadLibraryExW (L"msys-2.0.dll", NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
 
   wcscpy (dllpath, sysdir);
   wcscpy (dllpath + sysdir_len, dll);

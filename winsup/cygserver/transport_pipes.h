@@ -11,7 +11,11 @@ details. */
 #ifndef _TRANSPORT_PIPES_H
 #define _TRANSPORT_PIPES_H
 
+#ifdef __MSYS__
+#define PIPE_NAME_PREFIX	L"\\\\.\\pipe\\msys-"
+#else
 #define PIPE_NAME_PREFIX	L"\\\\.\\pipe\\cygwin-"
+#endif
 #define PIPE_NAME_SUFFIX	L"-lpc"
 
 /* Named pipes based transport, for security on NT */

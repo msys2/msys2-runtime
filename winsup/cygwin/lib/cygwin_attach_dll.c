@@ -15,10 +15,18 @@ details. */
 
 /* for a loaded dll */
 PVOID
+#ifdef __MSYS__
+msys_attach_dll (HMODULE h, MainFunc f)
+#else
 cygwin_attach_dll (HMODULE h, MainFunc f)
+#endif
 {
   static struct per_process u;
+#ifdef __MSYS__
+  (void) _msys_crt0_common (f, &u);
+#else
   (void) _cygwin_crt0_common (f, &u);
+#endif
 
   /* jump into the dll. */
   return dll_dllcrt0 (h, &u);
