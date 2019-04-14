@@ -34,7 +34,7 @@ win_env *getwinenv (const char *name, const char *posix = NULL, win_env * = NULL
 char *getwinenveq (const char *name, size_t len, int);
 
 char **build_env (const char * const *envp, PWCHAR &envblock,
-			  int &envc, bool need_envblock, HANDLE new_token);
+			  int &envc, bool need_envblock, HANDLE new_token, bool keep_posix);
 
 char **win32env_to_cygenv (PWCHAR rawenv, bool posify);
 
