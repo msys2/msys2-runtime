@@ -162,7 +162,11 @@ extern "C" void _pei386_runtime_relocator (per_process *);
 
 #ifdef __i386__
 /* dynamically loaded dll initialization for non-cygwin apps */
+#ifdef __MSYS__
+extern "C" int dll_nonmsys_dllcrt0 (HMODULE, per_process *);
+#else
 extern "C" int dll_noncygwin_dllcrt0 (HMODULE, per_process *);
+#endif
 #endif /* __i386__ */
 
 void __reg1 do_exit (int) __attribute__ ((noreturn));
