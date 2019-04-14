@@ -785,7 +785,11 @@ fhandler_pipe::close (int flag)
   return ret;
 }
 
+#ifdef __MSYS__
+#define PIPE_INTRO "\\\\.\\pipe\\msys-"
+#else
 #define PIPE_INTRO "\\\\.\\pipe\\cygwin-"
+#endif
 
 /* Create a pipe, and return handles to the read and write ends,
    just like CreatePipe, but ensure that the write end permits
