@@ -595,7 +595,7 @@ LoadDLLfunc (SetThreadGroupAffinity, 12, kernel32)
    available via KernelBase.dll. */
 LoadDLLfunc (QueryInterruptTime, 4, KernelBase)
 LoadDLLfunc (QueryInterruptTimePrecise, 4, KernelBase)
-LoadDLLfunc (QueryUnbiasedInterruptTime, 4, KernelBase)
+LoadDLLfunc (QueryUnbiasedInterruptTime, 4, kernel32)
 LoadDLLfunc (QueryUnbiasedInterruptTimePrecise, 4, KernelBase)
 LoadDLLfunc (VirtualAlloc2, 28, kernelbase)
 
