@@ -81,11 +81,12 @@ execv (const char *path, char * const *argv)
 }
 
 extern "C" int
-execve (const char *path, char *const argv[], char *const envp[])
+execve_1 (const char *path, char *const argv[], char *const envp[])
 {
   return spawnve (_P_OVERLAY, path, argv, envp);
 }
-EXPORT_ALIAS (execve, _execve)	/* For newlib */
+EXPORT_ALIAS (execve_1, _execve)	/* For newlib */
+EXPORT_ALIAS (execve_1, execve)
 
 extern "C" int
 execvp (const char *file, char * const *argv)

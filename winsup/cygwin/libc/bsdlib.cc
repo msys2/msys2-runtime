@@ -265,12 +265,12 @@ logwtmp (const char *line, const char *user, const char *host)
   ut.ut_type = USER_PROCESS;
   ut.ut_pid = getpid ();
   if (line)
-    strncpy (ut.ut_line, line, sizeof ut.ut_line);
+    strlcpy (ut.ut_line, line, sizeof ut.ut_line);
   time (&ut.ut_time);
   if (user)
-    strncpy (ut.ut_user, user, sizeof ut.ut_user);
+    strlcpy (ut.ut_user, user, sizeof ut.ut_user);
   if (host)
-    strncpy (ut.ut_host, host, sizeof ut.ut_host);
+    strlcpy (ut.ut_host, host, sizeof ut.ut_host);
   updwtmp (_PATH_WTMP, &ut);
 }
 
