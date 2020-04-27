@@ -131,7 +131,7 @@ dumper::sane ()
 void
 print_section_name (bfd* abfd, asection* sect, PTR obj)
 {
-  deb_printf (" %s", bfd_get_section_name (abfd, sect));
+  deb_printf (" %s", bfd_section_name (sect));
 }
 
 void
@@ -712,9 +712,8 @@ dumper::prepare_core_dump ()
 
       if (p->type == pr_ent_module && status_section != NULL)
 	{
-	  if (!bfd_set_section_size (core_bfd,
-				     status_section,
-				     (bfd_get_section_size (status_section)
+	  if (!bfd_set_section_size (status_section,
+				     (bfd_section_size (status_section)
 				      + sect_size)))
 	    {
 	      bfd_perror ("resizing status section");
@@ -738,8 +737,8 @@ dumper::prepare_core_dump ()
 	  goto failed;
 	}
 
-      if (!bfd_set_section_flags (core_bfd, new_section, sect_flags) ||
-	  !bfd_set_section_size (core_bfd, new_section, sect_size))
+      if (!bfd_set_section_flags (new_section, sect_flags) ||
+	  !bfd_set_section_size (new_section, sect_size))
 	{
 	  bfd_perror ("setting section attributes");
 	  goto failed;
@@ -823,7 +822,7 @@ dumper::write_core_dump ()
       deb_printf ("writing section type=%u base=%p size=%p flags=%08x\n",
 		  p->type,
 		  p->section->vma,
-		  bfd_get_section_size (p->section),
+		  bfd_section_size (p->section),
 		  p->section->flags);
 
       switch (p->type)

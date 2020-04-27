@@ -73,11 +73,11 @@ select_data_section (bfd * abfd, asection * sect, PTR obj)
   exclusion *excl_list = (exclusion *) obj;
 
   if ((sect->flags & (SEC_CODE | SEC_DEBUGGING)) &&
-      sect->vma && bfd_get_section_size (sect))
+      sect->vma && bfd_section_size (sect))
     {
-      excl_list->add ((LPBYTE) sect->vma, (SIZE_T) bfd_get_section_size (sect));
+      excl_list->add ((LPBYTE) sect->vma, (SIZE_T) bfd_section_size (sect));
       deb_printf ("excluding section: %20s %08lx\n", sect->name,
-		  bfd_get_section_size (sect));
+		  bfd_section_size (sect));
     }
 }
 
