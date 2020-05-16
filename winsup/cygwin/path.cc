@@ -2281,6 +2281,7 @@ symlink_worker (const char *oldpath, path_conv &win32_newpath, bool isdevice)
                  to the directory of the destination */
              {
                 /* Determine the character position of the last path component */
+                const char *newpath = win32_newpath.get_posix();
                 int pos = strlen (newpath);
                 while (--pos >= 0)
                   if (isdirsep (newpath[pos]))
