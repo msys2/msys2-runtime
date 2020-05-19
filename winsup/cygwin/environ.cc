@@ -42,6 +42,7 @@ enum settings
     isfunc,
     setdword,
     setbool,
+    setnegbool,
     setbit
   };
 
@@ -118,6 +119,7 @@ static struct parse_thing
   } known[] NO_COPY =
 {
   {"disable_pcon", {&disable_pcon}, setbool, NULL, {{false}, {true}}},
+  {"enable_pcon", {&disable_pcon}, setnegbool, NULL, {{true}, {false}}},
   {"error_start", {func: error_start_init}, isfunc, NULL, {{0}, {0}}},
   {"export", {&export_settings}, setbool, NULL, {{false}, {true}}},
   {"glob", {func: glob_init}, isfunc, NULL, {{0}, {s: "normal"}}},
@@ -243,6 +245,13 @@ parse_options (const char *inbuf)
 		else
 		  *k->setting.b = !!strtol (eq, NULL, 0);
 		debug_printf ("%s%s", *k->setting.b ? "" : "no", k->name);
+		break;
+	      case setnegbool:
+		if (!istrue || !eq)
+		  *k->setting.b = k->values[istrue].i;
+		else
+		  *k->setting.b = !strtol (eq, NULL, 0);
+		debug_printf ("%s%s", !*k->setting.b ? "" : "no", k->name);
 		break;
 	      case setbit:
 		*k->setting.x &= ~k->values[istrue].i;
