@@ -42,6 +42,7 @@ enum settings
     isfunc,
     setdword,
     setbool,
+    setnegbool,
     setbit
   };
 
@@ -120,6 +121,7 @@ static struct parse_thing
   {"wincmdln", {&wincmdln}, setbool, NULL, {{false}, {true}}},
   {"winsymlinks", {func: set_winsymlinks}, isfunc, NULL, {{0}, {0}}},
   {"disable_pcon", {&disable_pcon}, setbool, NULL, {{false}, {true}}},
+  {"enable_pcon", {&disable_pcon}, setnegbool, NULL, {{true}, {false}}},
   {NULL, {0}, setdword, 0, {{0}, {0}}}
 };
 
@@ -236,6 +238,13 @@ parse_options (const char *inbuf)
 		else
 		  *k->setting.b = !!strtol (eq, NULL, 0);
 		debug_printf ("%s%s", *k->setting.b ? "" : "no", k->name);
+		break;
+	      case setnegbool:
+		if (!istrue || !eq)
+		  *k->setting.b = k->values[istrue].i;
+		else
+		  *k->setting.b = !strtol (eq, NULL, 0);
+		debug_printf ("%s%s", !*k->setting.b ? "" : "no", k->name);
 		break;
 	      case setbit:
 		*k->setting.x &= ~k->values[istrue].i;
