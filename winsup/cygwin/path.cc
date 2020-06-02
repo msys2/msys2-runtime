@@ -1955,6 +1955,7 @@ typedef struct _REPARSE_LX_SYMLINK_BUFFER
   } LxSymlinkReparseBuffer;
 } REPARSE_LX_SYMLINK_BUFFER,*PREPARSE_LX_SYMLINK_BUFFER;
 
+#ifndef __MSYS__
 static int
 symlink_wsl (const char *oldpath, path_conv &win32_newpath)
 {
@@ -2025,6 +2026,7 @@ symlink_wsl (const char *oldpath, path_conv &win32_newpath)
   NtClose (fh);
   return 0;
 }
+#endif
 
 int
 symlink_worker (const char *oldpath, path_conv &win32_newpath, bool isdevice)
@@ -2109,6 +2111,7 @@ symlink_worker (const char *oldpath, path_conv &win32_newpath, bool isdevice)
 	    }
 	  /* Otherwise, fall back to default symlink type. */
 	  wsym_type = WSYM_sysfile;
+#ifndef __MSYS__
 	  /*FALLTHRU*/
 	case WSYM_sysfile:
 	  if (win32_newpath.fs_flags () & FILE_SUPPORTS_REPARSE_POINTS)
@@ -2120,6 +2123,7 @@ symlink_worker (const char *oldpath, path_conv &win32_newpath, bool isdevice)
 	  /* On FSes not supporting reparse points, or in case of an error
 	     creating the WSL symlink, fall back to creating the plain old
 	     SYSTEM file symlink. */
+#endif
 	  break;
 	default:
 	  break;
