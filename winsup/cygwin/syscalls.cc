@@ -4539,7 +4539,7 @@ popen (const char *command, const char *in_type)
 
       /* Start a shell process to run the given command without forking. */
       child_info_spawn ch_spawn_local (_CH_NADA);
-      pid_t pid = ch_spawn_local.worker ("/bin/sh", argv, environ, _P_NOWAIT,
+      pid_t pid = ch_spawn_local.worker ("/usr/bin/sh", argv, environ, _P_NOWAIT,
 					 __std[0], __std[1]);
 
       /* Reinstate the close-on-exec state */
