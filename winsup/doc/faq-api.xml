@@ -169,7 +169,7 @@ for the old executable and any dll into per-user subdirectories in the
 <para>If the DLL thinks it was invoked from a DOS style prompt, it runs a
 `globber' over the arguments provided on the command line.  This means
 that if you type <literal>LS *.EXE</literal> from DOS, it will do what you might
-expect.
+expect.  This only happens to the unquoted parts.
 </para>
 <para>Beware: globbing uses <literal>malloc</literal>.  If your application defines
 <literal>malloc</literal>, that will get used.  This may do horrible things to you.

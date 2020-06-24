@@ -84,7 +84,7 @@ do_global_ctors (void (**in_pfunc)(), int force)
  * @foo and not the contents of foo.
  */
 static bool __stdcall
-insert_file (char *name, char *&cmd)
+insert_file (const char *name, char *&cmd, int free_old)
 {
   HANDLE f;
   DWORD size;
@@ -140,6 +140,8 @@ insert_file (char *name, char *&cmd)
 
   tmp[size++] = ' ';
   strcpy (tmp + size, cmd);
+  if (free_old)
+    free (cmd);
   cmd = tmp;
   return true;
 }
@@ -151,44 +153,68 @@ isquote (char c)
   return ch == '"' || ch == '\'';
 }
 
-/* Step over a run of characters delimited by quotes */
-static /*__inline*/ char *
-quoted (char *cmd, int winshell, int glob)
+/* MSVCRT-like argument parsing.
+ * Parse a word in-place, consuming characters and marking where quoting state is changed. */
+static /*__inline*/ bool
+next_arg (char *&cmd, char *&arg, size_t* quotepos, size_t &quotesize)
 {
-  char *p;
-  char quote = *cmd;
+  bool inquote = false;
+  size_t nbs = 0;
+  char quote = '\0';
+  quotepos[0] = SIZE_MAX;
+  size_t nquotes = 0;
 
-  if (!winshell || !glob)
+  while (*cmd && issep (*cmd))
+    cmd++;
+
+  arg = cmd;
+  char *out = arg;
+
+  for (;*cmd && (inquote || !issep (*cmd)); cmd++)
     {
-      char *p;
-      strcpy (cmd, cmd + 1);
-      if (*(p = strchrnul (cmd, quote)))
-	strcpy (p, p + 1);
-      return p;
+      if (*cmd == '\\')
+	{
+	  nbs += 1;
+	  continue;
+	}
+
+      // For anything else, sort out backslashes first.
+      memset (out, '\\', inquote ? nbs / 2 : nbs);
+      out += inquote ? nbs / 2 : nbs;
+
+      // Single-quote is our addition.  Would love to remove it.
+      if (nbs % 2 == 0 && (inquote ? *cmd == quote : isquote (*cmd)))
+	{
+	  /* The infamous "" special case: emit literal '"', no change.
+	   *
+	   * Makes quotepos tracking easier, so applies to single quote too:
+	   * without this handling, an out pos can contain many state changes,
+	   * so a check must be done before appending. */
+	  if (inquote && *cmd == quote && cmd[1] == quote)
+	    *out++ = *cmd++;
+	  else
+	    {
+	      if (!inquote)
+		quote = *cmd;
+	      if (++nquotes >= quotesize)
+		quotepos = realloc_type(quotepos, quotesize *= 2, size_t);
+	      quotepos[nquotes] = out - arg + inquote;
+	      inquote = !inquote;
+	    }
+	}
+      else
+	{
+	  *out++ = *cmd;
+	}
+
+      nbs = 0;
     }
 
-  const char *s = quote == '\'' ? "'" : "\\\"";
-  /* This must have been run from a Windows shell and globbing is enabled,
-     so preserve quotes for globify to play with later. */
-  while (*cmd && *++cmd)
-    if ((p = strpbrk (cmd, s)) == NULL)
-      {
-	cmd = strchr (cmd, '\0');	// no closing quote
-	break;
-      }
-    else if (*p == '\\')
-      cmd = ++p;
-    else if (quote == '"' && p[1] == '"')
-      {
-	*p = '\\';
-	cmd = ++p;			// a quoted quote
-      }
-    else
-      {
-	cmd = p + 1;		// point to after end
-	break;
-      }
-  return cmd;
+  if (*cmd)
+    cmd++;
+
+  *out = '\0';
+  return arg != cmd;
 }
 
 /* Perform a glob on word if it contains wildcard characters.
@@ -202,77 +228,62 @@ quoted (char *cmd, int winshell, int glob)
 			    && isalpha ((s)[2]) \
 			    && strchr ((s) + 3, '\\')))
 
+/* Call glob(3) on the word, and fill argv accordingly.
+ * If the input looks like a DOS path, double up backslashes.
+ */
 static int __stdcall
-globify (char *word, char **&argv, int &argc, int &argvlen)
+globify (const char *word, size_t *quotepos, size_t quotesize, char **&argv, int &argc, int &argvlen)
 {
   if (*word != '~' && strpbrk (word, "?*[\"\'(){}") == NULL)
     return 0;
 
-  int n = 0;
-  char *p, *s;
-  int dos_spec = is_dos_path (word);
-  if (!dos_spec && isquote (*word) && word[1] && word[2])
-    dos_spec = is_dos_path (word + 1);
-
   /* We'll need more space if there are quoting characters in
      word.  If that is the case, doubling the size of the
      string should provide more than enough space. */
-  if (strpbrk (word, "'\""))
-    n = strlen (word);
+  size_t n = quotepos[0] == SIZE_MAX ? 0 : strlen (word);
+  char *p;
+  const char *s;
+  int dos_spec = is_dos_path (word);
   char pattern[strlen (word) + ((dos_spec + 1) * n) + 1];
+  bool inquote = false;
+  size_t nquotes = 0;
 
   /* Fill pattern with characters from word, quoting any
      characters found within quotes. */
   for (p = pattern, s = word; *s != '\000'; s++, p++)
-    if (!isquote (*s))
-      {
-	if (dos_spec && *s == '\\')
-	  *p++ = '\\';
-	*p = *s;
-      }
-    else
-      {
-	char quote = *s;
-	while (*++s && *s != quote)
-	  {
-	    /* This used to be:
-	    if (dos_spec || *s != '\\')
-	      // nothing
-	    else if (s[1] == quote || s[1] == '\\')
-	      s++;
-	    With commit message:
-	       dcrt0.cc (globify): Don't use \ quoting when apparently quoting a DOS path
-	       spec, even within a quoted string.
-	    But that breaks the "literal quotes" part of '"C:/test.exe SOME_VAR=\"literal quotes\""'
-	    giving:    'C:/test.exe SOME_VAR=\literal quotes\' (with \'s between each character)
-	    instead of 'C:/test.exe SOME_VAR="literal quotes"' (with \'s between each character)
-	    */
-	    if (*s == '\\' && (s[1] == quote || s[1] == '\\'))
-	      s++;
+    {
+      if (nquotes < quotesize && quotepos[nquotes] == s - word)
+	{
+	  inquote = !inquote;
+	  nquotes++;
+	}
+      if (!inquote)
+	{
+	  if (dos_spec && *s == '\\')
 	    *p++ = '\\';
-	    size_t cnt = isascii (*s) ? 1 : mbtowc (NULL, s, MB_CUR_MAX);
-	    if (cnt <= 1 || cnt == (size_t)-1)
-	      *p++ = *s;
-	    else
-	      {
-		--s;
-		while (cnt-- > 0)
-		  *p++ = *++s;
-	      }
-	  }
-	if (*s == quote)
-	  p--;
-	if (*s == '\0')
-	    break;
-      }
-
+	  *p = *s;
+	}
+      else
+	{
+	  *p++ = '\\';
+	  int cnt = isascii (*s) ? 1 : mbtowc (NULL, s, MB_CUR_MAX);
+	  if (cnt <= 1)
+	    *p = *s;
+	  else
+	    {
+	      memcpy (p, s, cnt);
+	      p += cnt - 1;
+	      s += cnt - 1;
+	    }
+	}
+    }
   *p = '\0';
 
   glob_t gl;
   gl.gl_offs = 0;
 
-  /* Attempt to match the argument.  Return just word (minus quoting) if no match. */
-  if (glob (pattern, GLOB_TILDE | GLOB_NOCHECK | GLOB_BRACE | GLOB_QUOTE, NULL, &gl) || !gl.gl_pathc)
+  /* Attempt to match the argument.  Bail if no match. */
+  if (glob (pattern, GLOB_TILDE | GLOB_BRACE, NULL, &gl) || !gl.gl_pathc)
     return 0;
 
   /* Allocate enough space in argv for the matched filenames. */
@@ -288,7 +299,7 @@ globify (char *word, char **&argv, int &argc, int &argvlen)
   char **av = argv + n;
   while (*gv)
     {
-      debug_printf ("argv[%d] = '%s'", n++, *gv);
+      debug_printf ("argv[%zu] = '%s'", n++, *gv);
       *av++ = *gv++;
     }
 
@@ -298,60 +309,31 @@ globify (char *word, char **&argv, int &argc, int &argvlen)
 }
 
 /* Build argv, argc from string passed from Windows.  */
-
 static void __stdcall
-build_argv (char *cmd, char **&argv, int &argc, int winshell, int glob)
+build_argv (char *cmd, char **&argv, int &argc, int doglob)
 {
   int argvlen = 0;
   int nesting = 0;		// monitor "nesting" from insert_file
+
+  // Would be a bad idea to use alloca due to insert_file.
+  size_t quotesize = 32;
+  size_t *quotepos = malloc_type(quotesize, size_t);
 
   argc = 0;
   argvlen = 0;
   argv = NULL;
 
-  debug_printf ("cmd = '%s', winshell = %d, glob = %d", cmd, winshell, glob);
-
   /* Scan command line until there is nothing left. */
-  while (*cmd)
+  while (next_arg (cmd, word, quotepos, quotesize))
     {
-      /* Ignore spaces */
-      if (issep (*cmd))
-	{
-	  cmd++;
-	  continue;
-	}
-
-      /* Found the beginning of an argument. */
-      char *word = cmd;
-      char *sawquote = NULL;
-      while (*cmd)
-	{
-	  if (*cmd != '"' && (!winshell || *cmd != '\''))
-	    cmd++;		// Skip over this character
-	  else
-	    /* Skip over characters until the closing quote */
-	    {
-	      sawquote = cmd;
-	      /* Handle quoting.  Only strip off quotes if the parent is
-		 a Cygwin process, or if the word starts with a '@'.
-		 In this case, the insert_file function needs an unquoted
-		 DOS filename and globbing isn't performed anyway. */
-	      cmd = quoted (cmd, winshell && argc > 0 && *word != '@', glob);
-	    }
-	  if (issep (*cmd))	// End of argument if space
-	    break;
-	}
-      if (*cmd)
-	*cmd++ = '\0';		// Terminate `word'
-
       /* Possibly look for @file construction assuming that this isn't
 	 the very first argument and the @ wasn't quoted */
-      if (argc && sawquote != word && *word == '@')
+      if (argc && quotepos[0] > 1 && *word == '@')
 	{
 	  if (++nesting > MAX_AT_FILE_LEVEL)
 	    api_fatal ("Too many levels of nesting for %s", word);
-	  if (insert_file (word, cmd))
-	      continue;			// There's new stuff in cmd now
+	  if (insert_file (word, cmd, nesting - 1))
+	    continue;  // There's new stuff in cmd now
 	}
 
       /* See if we need to allocate more space for argv */
@@ -362,16 +344,17 @@ build_argv (char *cmd, char **&argv, int &argc, int winshell, int glob)
 	}
 
       /* Add word to argv file after (optional) wildcard expansion. */
-      if (!glob || !argc || !globify (word, argv, argc, argvlen))
+      if (!doglob || !argc || !globify (word, quotepos, quotesize, argv, argc, argvlen))
 	{
 	  debug_printf ("argv[%d] = '%s'", argc, word);
-	  argv[argc++] = word;
+	  argv[argc++] = strdup (word);
 	}
     }
 
   if (argv)
     argv[argc] = NULL;
 
+  free (quotepos);
   debug_printf ("argc %d", argc);
 }
 
@@ -1077,7 +1060,7 @@ _dll_crt0 ()
 	  if (stackaddr)
 	    {
 	      /* Set stack pointer to new address.  Set frame pointer to
-	         stack pointer and subtract 32 bytes for shadow space. */
+		 stack pointer and subtract 32 bytes for shadow space. */
 	      __asm__ ("\n\
 		       movq %[ADDR], %%rsp \n\
 		       movq  %%rsp, %%rbp  \n\

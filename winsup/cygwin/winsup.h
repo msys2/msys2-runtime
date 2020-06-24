@@ -146,6 +146,10 @@ extern int cygserver_running;
 #define isabspath(p) \
   (isdirsep (*(p)) || (isalpha (*(p)) && (p)[1] == ':' && (!(p)[2] || isdirsep ((p)[2]))))
 
+/* Shortcut.  See also std::add_pointer. */
+#define malloc_type(n, type) ((type *) malloc ((n) * sizeof (type)))
+#define realloc_type(b, n, type) ((type *) realloc (b, (n) * sizeof (type)))
+
 /******************** Initialization/Termination **********************/
 
 class per_process;
