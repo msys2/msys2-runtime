@@ -179,11 +179,14 @@ next_arg (char *&cmd, char *&arg, size_t* quotepos, size_t &quotesize)
 	}
 
       // For anything else, sort out backslashes first.
-      memset (out, '\\', inquote ? nbs / 2 : nbs);
-      out += inquote ? nbs / 2 : nbs;
-
+      // All backslashes are literal, except these before a quote.
       // Single-quote is our addition.  Would love to remove it.
-      if (nbs % 2 == 0 && (inquote ? *cmd == quote : isquote (*cmd)))
+      bool atquote = inquote ? *cmd == quote : isquote (*cmd);
+      size_t n = atquote ? nbs / 2 : nbs;
+      memset (out, '\\', n);
+      out += n;
+
+      if (nbs % 2 == 0 && atquote)
 	{
 	  /* The infamous "" special case: emit literal '"', no change.
 	   *
@@ -328,7 +331,7 @@ build_argv (char *cmd, char **&argv, int &argc, int doglob)
     {
       /* Possibly look for @file construction assuming that this isn't
 	 the very first argument and the @ wasn't quoted */
-      if (argc && quotepos[0] > 1 && *word == '@')
+      if (argc && quotepos[0] > 0 && *word == '@')
 	{
 	  if (++nesting > MAX_AT_FILE_LEVEL)
 	    api_fatal ("Too many levels of nesting for %s", word);
