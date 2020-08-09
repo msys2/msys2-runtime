@@ -1,0 +1,95 @@
+name: build
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: setup-msys2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MSYS
+          update: true
+          install: msys2-devel base-devel autotools cocom diffutils gcc gettext-devel libiconv-devel make mingw-w64-cross-crt mingw-w64-cross-gcc mingw-w64-cross-zlib perl zlib-devel xmlto docbook-xsl
+
+      - name: Build
+        shell: msys2 {0}
+        run: |
+          (cd winsup && ./autogen.sh)
+          ./configure --disable-dependency-tracking --with-msys2-runtime-commit="$GITHUB_SHA"
+          make -j8
+
+      - name: Install
+        shell: msys2 {0}
+        run: |
+          make DESTDIR="$(pwd)"/_dest install
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: install
+          path: _dest/
+
+  generate-msys2-tests-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - id: matrix
+        uses: msys2/msys2-tests/gha-matrix-gen@main
+
+  msys2-tests:
+    needs: [build, generate-msys2-tests-matrix]
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.generate-msys2-tests-matrix.outputs.matrix) }}
+
+    name: msys2-tests ${{ matrix.msystem }}-${{ matrix.cc }}
+    runs-on: ${{ matrix.runner }}
+    env:
+      CC: ${{ matrix.cc }}
+      CXX: ${{ matrix.cxx }}
+      FC: ${{ matrix.fc }}
+    steps:
+      - id: msys2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{ matrix.msystem }}
+          update: true
+          install: ${{ matrix.packages }}
+
+      - name: Add staging repo
+        shell: msys2 {0}
+        run: |
+          sed -i '1s|^|[staging]\nServer = https://repo.msys2.org/staging/\nSigLevel = Never\n|' /etc/pacman.conf
+
+      - name: Update using staging
+        shell: pwsh
+        run: |
+          msys2 -c 'pacman --noconfirm -Suuy'
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          msys2 -c 'pacman --noconfirm -Suu'
+
+      - name: Download msys2-runtime artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: install
+          path: ${{ steps.msys2.outputs.msys2-location }}
+
+      - name: uname -a
+        shell: msys2 {0}
+        run: uname -a
+
+      - name: Run tests
+        uses: msys2/msys2-tests@main
+
