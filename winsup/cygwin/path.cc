@@ -1657,7 +1657,7 @@ static int
 recursiveCopy (char * src, char * dst, const char * origpath)
 {
   WIN32_FIND_DATA dHfile;
-  HANDLE dH;
+  HANDLE dH = INVALID_HANDLE_VALUE;
   BOOL findfiles;
   int srcpos = strlen (src);
   int dstpos = strlen (dst);
@@ -1726,6 +1726,9 @@ recursiveCopy (char * src, char * dst, const char * origpath)
   res = 0;
 
 done:
+
+  if (dH != INVALID_HANDLE_VALUE)
+    FindClose (dH);
 
   return res;
 }
