@@ -1,0 +1,36 @@
+name: build
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: setup-msys2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MSYS
+          update: true
+          install: msys2-devel base-devel cocom diffutils gcc gettext-devel libiconv-devel make mingw-w64-cross-crt mingw-w64-cross-gcc mingw-w64-cross-zlib perl zlib-devel
+
+      - name: Build
+        shell: msys2 {0}
+        run: |
+          (cd winsup && ./autogen.sh)
+          ./configure
+          make -j8
+
+      - name: Install
+        shell: msys2 {0}
+        run: |
+          make DESTDIR="$(pwd)"/_dest install
+
+      - name: Upload
+        uses: actions/upload-artifact@v2
+        with:
+          name: install
+          path: _dest/
