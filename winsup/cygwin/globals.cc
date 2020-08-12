@@ -70,7 +70,7 @@ bool allow_glob = true;
 bool ignore_case_with_glob;
 bool pipe_byte = true; /* Default to byte mode so that C# programs work. */
 bool reset_com;
-bool wincmdln;
+bool wincmdln = true;
 winsym_t allow_winsymlinks = WSYM_deepcopy;
 bool disable_pcon;
 bool winjitdebug = false;
