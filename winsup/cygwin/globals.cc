@@ -72,7 +72,7 @@ bool allow_glob = true;
 bool ignore_case_with_glob;
 bool pipe_byte;
 bool reset_com;
-bool wincmdln;
+bool wincmdln = true;
 winsym_t allow_winsymlinks = WSYM_deepcopy;
 bool disable_pcon = true;
 
