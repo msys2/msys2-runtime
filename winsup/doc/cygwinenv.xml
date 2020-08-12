@@ -68,7 +68,7 @@ time and when handles are inherited.  Defaults to set.</para>
 <listitem>
 <para><envar>(no)wincmdln</envar> - if set, the windows complete command
 line (truncated to ~32K) will be passed on any processes that it creates
-in addition to the normal UNIX argv list.  Defaults to not set.</para>
+in addition to the normal UNIX argv list.  Defaults to set.</para>
 </listitem>
 
 <listitem>
