@@ -2905,6 +2905,8 @@ fhandler_pty_slave::setup_locale (void)
 	  get_ttyp ()->term_code_page = cs_names[i].cp;
 	  break;
 	}
+  SetConsoleCP (get_ttyp ()->term_code_page);
+  SetConsoleOutputCP (get_ttyp ()->term_code_page);
 }
 
 void
