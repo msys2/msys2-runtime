@@ -2765,7 +2765,7 @@ fhandler_console::write_normal (const unsigned char *src,
   DWORD done;
   DWORD buf_len;
   const unsigned char *found = src;
-  size_t ret;
+  int ret;
   mbstate_t ps;
   mbtowc_p f_mbtowc;
 
@@ -2945,7 +2945,7 @@ do_print:
 		{
 		  ret = __utf8_mbtowc (_REENT, NULL, (const char *) found + 1,
 				       end - found - 1, &ps);
-		  if (ret != (size_t) -1)
+		  if (ret != -1)
 		    while (ret-- > 0)
 		      {
 			WCHAR w = *(found + 1);
