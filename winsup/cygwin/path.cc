@@ -2269,73 +2269,76 @@ symlink_worker (const char *oldpath, path_conv &win32_newpath, bool isdevice)
 	}
       else
 	{
-      path_conv src_path;
-      src_path.check (oldpath, PC_SYM_NOFOLLOW, stat_suffixes);
-      if (src_path.error)
-        {
-           set_errno (src_path.error);
-           __leave;
-        }
-      if (!src_path.isdevice () && !src_path.is_fs_special ())
-        {
-           /* MSYS copy file instead make symlink */
+          if (wsym_type == WSYM_deepcopy)
+	    {
+	      path_conv src_path;
+	      src_path.check (oldpath, PC_SYM_NOFOLLOW, stat_suffixes);
+	      if (src_path.error)
+		{
+		  set_errno (src_path.error);
+		  __leave;
+		}
+	      if (!src_path.isdevice () && !src_path.is_fs_special ())
+	        {
+		  /* MSYS copy file instead make symlink */
 
-           char * real_oldpath;
-           if (isabspath (oldpath))
-             strcpy (real_oldpath = tp.c_get (), oldpath);
-           else
-              /* Find the real source path, relative
-                 to the directory of the destination */
-             {
-                /* Determine the character position of the last path component */
-                const char *newpath = win32_newpath.get_posix();
-                int pos = strlen (newpath);
-                while (--pos >= 0)
-                  if (isdirsep (newpath[pos]))
-                    break;
-                /* Append the source path to the directory
-                   component of the destination */
-                if (pos+1+strlen(oldpath) >= MAX_PATH)
-                  {
-                     set_errno(ENAMETOOLONG);
-                     __leave;
-                  }
-                strcpy (real_oldpath = tp.c_get (), newpath);
-                strcpy (&real_oldpath[pos+1], oldpath);
-             }
+		  char * real_oldpath;
+		  if (isabspath (oldpath))
+		    strcpy (real_oldpath = tp.c_get (), oldpath);
+		  else
+		    /* Find the real source path, relative
+		       to the directory of the destination */
+		    {
+		      /* Determine the character position of the last path component */
+		      const char *newpath = win32_newpath.get_posix();
+		      int pos = strlen (newpath);
+		      while (--pos >= 0)
+			if (isdirsep (newpath[pos]))
+			  break;
+		      /* Append the source path to the directory
+			 component of the destination */
+		      if (pos+1+strlen(oldpath) >= MAX_PATH)
+			{
+			  set_errno(ENAMETOOLONG);
+			  __leave;
+			}
+		      strcpy (real_oldpath = tp.c_get (), newpath);
+		      strcpy (&real_oldpath[pos+1], oldpath);
+		    }
 
-           /* As a MSYS limitation, the source path must exist. */
-		   path_conv win32_oldpath;
-           win32_oldpath.check (real_oldpath, PC_SYM_NOFOLLOW, stat_suffixes);
-           if (!win32_oldpath.exists ())
-             {
-                set_errno (ENOENT);
-                __leave;
-             }
+		  /* As a MSYS limitation, the source path must exist. */
+		  path_conv win32_oldpath;
+		  win32_oldpath.check (real_oldpath, PC_SYM_NOFOLLOW, stat_suffixes);
+		  if (!win32_oldpath.exists ())
+		    {
+		      set_errno (ENOENT);
+		      __leave;
+		    }
 
-           char *w_newpath;
-           char *w_oldpath;
-           stpcpy (w_newpath = tp.c_get (), win32_newpath.get_win32());
-           stpcpy (w_oldpath = tp.c_get (), win32_oldpath.get_win32());
-           if (win32_oldpath.isdir())
-             {
-                char *origpath;
-                strcpy (origpath = tp.c_get (), w_oldpath);
-                res = recursiveCopy (w_oldpath, w_newpath, origpath);
-             }
-           else
-             {
-                if (!CopyFile (w_oldpath, w_newpath, FALSE))
-                  {
-                     __seterrno ();
-                  }
-                else
-                  {
-                     res = 0;
-                  }
-             }
-           __leave;
-        }
+		  char *w_newpath;
+		  char *w_oldpath;
+		  stpcpy (w_newpath = tp.c_get (), win32_newpath.get_win32());
+		  stpcpy (w_oldpath = tp.c_get (), win32_oldpath.get_win32());
+		  if (win32_oldpath.isdir())
+		    {
+		      char *origpath;
+		      strcpy (origpath = tp.c_get (), w_oldpath);
+		      res = recursiveCopy (w_oldpath, w_newpath, origpath);
+		    }
+		  else
+		    {
+		      if (!CopyFile (w_oldpath, w_newpath, FALSE))
+			{
+			  __seterrno ();
+			}
+		      else
+			{
+			  res = 0;
+			}
+		    }
+		  __leave;
+		}
+	    }
 
 	  /* Default technique creating a symlink. */
 	  buf = tp.t_get ();
