@@ -407,6 +407,13 @@ report (const char *in_fn, bool multiple)
 	  }
 	  break;
 	case EXIT_PROCESS_DEBUG_EVENT:
+    if (ev.u.ExitProcess.dwExitCode != 0)
+    {
+      /* All dll dependencies were NOT found. */
+      process_fn = fn_win;
+      res = 1;
+    }
+
 print_and_exit:
 	  print_dlls (&dll_list, isdll ? fn_win : NULL, process_fn);
 	  exitnow = true;
