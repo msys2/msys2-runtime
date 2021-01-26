@@ -185,6 +185,7 @@ POSIX commands */
 #define PARODD	 0x00200
 #define HUPCL	 0x00400
 #define CLOCAL	 0x00800
+#define CMSPAR  0x40000000 /* Mark or space (stick) parity.  */
 
 /* Extended baud rates above 37K. */
 #define CBAUDEX	 0x0100f
