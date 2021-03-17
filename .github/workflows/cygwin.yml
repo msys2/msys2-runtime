@@ -1,12 +1,6 @@
 name: cygwin
 
-on:
- push:
-   # since master is a symbolic reference to main, don't run for both
-   branches-ignore:
-     - 'master'
-   tags:
-     - '*'
+on: workflow_dispatch
 
 jobs:
   fedora-build:
