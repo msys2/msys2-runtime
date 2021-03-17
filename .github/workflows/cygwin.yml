@@ -1,6 +1,6 @@
 name: cygwin
 
-on: push
+on: workflow_dispatch
 
 jobs:
   fedora-build:
