@@ -37,9 +37,11 @@ uname_x (struct utsname *name)
       memset (name, 0, sizeof (*name));
       /* sysname */
       char* msystem = getenv("MSYSTEM");
-      const char *msystem_msys = "MSYS";
+      const char* msystem_sysname = "MSYS";
+      if (msystem != NULL && *msystem && strcmp(msystem, "MSYS") != 0)
+        msystem_sysname = (strstr(msystem, "32") != NULL) ? "MINGW32" : "MINGW64";;
       __small_sprintf (name->sysname, "%s_%s-%u%s",
-		       msystem ? msystem : msystem_msys,
+		       msystem_sysname,
 		       wincap.osname (), wincap.build_number (),
 		       wincap.is_wow64 () ? "-WOW64" : "");
       /* nodename */
@@ -103,8 +105,10 @@ uname (struct utsname *in_name)
       memset (name, 0, sizeof (*name));
 #ifdef __MSYS__
       char* msystem = getenv("MSYSTEM");
-      const char *msystem_msys = "MSYS";
-      __small_sprintf (name->sysname, "%s_%s", msystem ? msystem : msystem_msys, wincap.osname ());
+      const char* msystem_sysname = "MSYS";
+      if (msystem != NULL && *msystem && strcmp(msystem, "MSYS") != 0)
+        msystem_sysname = (strstr(msystem, "32") != NULL) ? "MINGW32" : "MINGW64";
+      __small_sprintf (name->sysname, "%s_%s", msystem_sysname, wincap.osname ());
 #else
       __small_sprintf (name->sysname, "CYGWIN_%s", wincap.osname ());
 #endif
