@@ -123,6 +123,19 @@ static struct filelist
   char *name;
 } *head;
 
+static void
+destroy_filelist (struct filelist **phead)
+{
+  struct filelist *next, *head = *phead;
+  while (head) {
+    next = head->next;
+    free (head->name);
+    free (head);
+    head = next;
+  }
+  *phead = NULL;
+}
+
 static bool
 saw_file (char *name)
 {
@@ -248,6 +261,18 @@ struct dlls
     struct dlls *next;
   };
 
+static void
+destroy_dlls (struct dlls *dlls)
+{
+  struct dlls* next;
+  while (dlls) {
+    next = dlls->next;
+    free (dlls);
+    dlls = next;
+  }
+
+}
+
 #define SLOP strlen (" (?)")
 char *
 tocyg (wchar_t *win_fn)
@@ -280,7 +305,7 @@ tocyg (wchar_t *win_fn)
 static int
 print_dlls (dlls *dll, const wchar_t *dllfn, const wchar_t *process_fn)
 {
-  head = NULL;			/* FIXME: memory leak */
+  destroy_filelist(&head);
   while ((dll = dll->next))
     {
       char *fn;
@@ -407,6 +432,13 @@ report (const char *in_fn, bool multiple)
 	  }
 	  break;
 	case EXIT_PROCESS_DEBUG_EVENT:
+    if (ev.u.ExitProcess.dwExitCode != 0)
+    {
+      /* All dll dependencies were NOT found. */
+      process_fn = fn_win;
+      res = 1;
+    }
+
 print_and_exit:
 	  print_dlls (&dll_list, isdll ? fn_win : NULL, process_fn);
 	  exitnow = true;
@@ -422,6 +454,9 @@ print_and_exit:
       if (exitnow)
 	break;
     }
+
+  /* cleanup */
+  destroy_dlls(dll_list.next);
 
   return res;
 }
