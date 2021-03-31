@@ -73,6 +73,7 @@ bool reset_com;
 bool wincmdln = true;
 winsym_t allow_winsymlinks = WSYM_deepcopy;
 bool disable_pcon;
+bool winjitdebug = false;
 
 /* Taken from BSD libc:
    This variable is zero until a process has created a pthread.  It is used
