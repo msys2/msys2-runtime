@@ -3,11 +3,14 @@ name: sync-with-cygwin
 # File: .github/workflows/repo-sync.yml
 
 on:
+  workflow_dispatch:
   schedule:
   - cron:  "42 * * * *"
 jobs:
   repo-sync:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
     - name: Fetch Cygwin's latest master and tags
       run: |
