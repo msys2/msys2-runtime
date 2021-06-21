@@ -75,13 +75,14 @@ kill_via_console_helper (HANDLE process, wchar_t *function_name, int exit_code,
 
   STARTUPINFOW si = {};
   PROCESS_INFORMATION pi;
-  size_t len = wcslen (wbuf) + wcslen (function_name) + 3 /* exit code */
-               + 1 /* space */ + 10 /* process ID, i.e. DWORD */ + 1 /* NUL */;
+  size_t len = wcslen (wbuf) + 1 /* space */ + wcslen (function_name)
+               + 1 /* space */ + 3 /* exit code */ + 1 /* space */
+               + 10 /* process ID, i.e. DWORD */ + 1 /* NUL */;
   WCHAR cmd[len + 1];
   WCHAR title[] = L"cygwin-console-helper";
   DWORD process_exit;
 
-  swprintf (cmd, len + 1, L"%S %S %d %ld", wbuf, function_name, exit_code,
+  swprintf (cmd, len + 1, L"%S %S %d %u", wbuf, function_name, exit_code,
             pid);
 
   si.cb = sizeof (si);
@@ -194,10 +195,10 @@ exit_process_tree (HANDLE main_process, int exit_code)
   PROCESSENTRY32 entry;
   DWORD pids[16384];
   int max_len = sizeof (pids) / sizeof (*pids), i, len, ret = 0;
-  pid_t pid = GetProcessId (main_process);
+  DWORD pid = GetProcessId (main_process);
   int signo = exit_code & 0x7f;
 
-  pids[0] = (DWORD)pid;
+  pids[0] = pid;
   len = 1;
 
   /*
@@ -249,6 +250,8 @@ exit_process_tree (HANDLE main_process, int exit_code)
         break;
     }
 
+  CloseHandle (snapshot);
+
   for (i = len - 1; i >= 0; i--)
     {
       HANDLE process;
@@ -262,7 +265,9 @@ exit_process_tree (HANDLE main_process, int exit_code)
                   | PROCESS_VM_OPERATION | PROCESS_VM_WRITE | PROCESS_VM_READ,
               FALSE, pids[i]);
           if (!process)
-            process = OpenProcess (PROCESS_TERMINATE, FALSE, pids[i]);
+            process = OpenProcess (
+                PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_TERMINATE,
+                FALSE, pids[i]);
         }
       DWORD code;
 
@@ -272,7 +277,7 @@ exit_process_tree (HANDLE main_process, int exit_code)
           if (!exit_process (process, exit_code))
             ret = -1;
         }
-      if (process)
+      if (process && process != main_process)
         CloseHandle (process);
     }
 
