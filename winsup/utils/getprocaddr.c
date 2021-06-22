@@ -40,12 +40,23 @@ inject_remote_thread_into_process (HANDLE process,
     {
       /*
        * Wait up to 10 seconds (arbitrary constant) for the thread to finish;
-       * After that grace period, fall back to exit with an exit code
-       * indicating failure.
+       * Maybe we should wait forever? I have seen Cmd does so, but well...
        */
-      if (WaitForSingleObject (thread, 10000) == WAIT_OBJECT_0 &&
-          GetExitCodeThread(thread, &code) && code != STILL_ACTIVE)
+      if (WaitForSingleObject (thread, 10000) == WAIT_OBJECT_0)
         res = 0;
+      /*
+      According to the docs at MSDN for GetExitCodeThread, it will
+      get the return value from the function, here CtrlRoutine. So, this
+      checks if the Ctrl Event is handled correctly by the process.
+
+      By some testing I could see CtrlRoutine returns 0 in case where
+      CtrlEvent set by SetConsoleCtrlHandler is handled correctly, in all
+      other cases it returns something non-zero(not sure what it that).
+      */
+      GetExitCodeThread (thread, &code);
+      if (code != 0)
+        res = code;
+
       CloseHandle (thread);
     }
 
@@ -123,10 +134,14 @@ ctrl_handler (DWORD ctrl_type)
           return 1;
         }
       /* Inject the remote thread only when asked to */
-      if (inject_remote_thread_into_process (h, address, exit_code) < 0)
+      int t = inject_remote_thread_into_process (h, address, exit_code);
+      if (t != 0)
         {
-          fprintf (stderr, "Could not inject thread into process %d\n", pid);
-          return 1;
+          fprintf (stderr,
+                   "Error while injecting remote thread %d for pid(%d)\n", t,
+                   pid);
+          exit (1); /*We should exit immediately or else there will a 10s hang
+                       waiting for the event to happen.*/
         }
     }
   SymCleanup (process);

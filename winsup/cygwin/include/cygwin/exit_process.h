@@ -163,10 +163,12 @@ exit_process (HANDLE process, int exit_code)
     {
     case SIGINT:
     case SIGQUIT:
+      /* We are not going to kill them but simply say that Ctrl+C
+      is pressed. If the processes want they can exit or else
+      just wait.*/
       if (kill_via_console_helper (
               process, L"CtrlRoutine",
-              signo == SIGINT ? CTRL_C_EVENT : CTRL_BREAK_EVENT, pid) &&
-          GetExitCodeProcess(process, &code) && code != STILL_ACTIVE)
+              signo == SIGINT ? CTRL_C_EVENT : CTRL_BREAK_EVENT, pid))
         return 0;
       /* fall-through */
     case SIGTERM:
