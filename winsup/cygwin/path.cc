@@ -3604,6 +3604,7 @@ restart:
 	    break;
 	}
 
+#ifndef __MSYS__
       /* Check if the inner path components contain native symlinks or
 	 junctions, or if the drive is a virtual drive.  Compare incoming
 	 path with path returned by GetFinalPathNameByHandleA.  If they
@@ -3677,6 +3678,7 @@ restart:
 	      }
 	  }
       }
+#endif
 
     /* Normal file. */
     file_not_symlink:
