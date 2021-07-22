@@ -3644,7 +3644,8 @@ restart:
 	    goto file_not_symlink;
 	}
 #endif /* __i386__ */
-      if ((pc_flags & (PC_SYM_FOLLOW | PC_SYM_NOFOLLOW_REP)) == PC_SYM_FOLLOW)
+      if (nativeinnerlinks
+	  && (pc_flags & (PC_SYM_FOLLOW | PC_SYM_NOFOLLOW_REP)) == PC_SYM_FOLLOW)
 	{
 	  PWCHAR fpbuf = tp.w_get ();
 	  DWORD ret;
