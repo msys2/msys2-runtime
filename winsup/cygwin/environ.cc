@@ -129,6 +129,7 @@ static struct parse_thing
   {"disable_pcon", {&disable_pcon}, setbool, NULL, {{false}, {true}}},
   {"enable_pcon", {&disable_pcon}, setnegbool, NULL, {{true}, {false}}},
   {"winjitdebug", {&winjitdebug}, setbool, NULL, {{false}, {true}}},
+  {"nativeinnerlinks", {&nativeinnerlinks}, setbool, NULL, {{false}, {true}}},
   {NULL, {0}, setdword, 0, {{0}, {0}}}
 };
 
