@@ -3724,7 +3724,8 @@ restart:
 	 differ, return the final path as symlink content and set symlen
 	 to a negative value.  This forces path_conv::check to restart
 	 symlink evaluation with the new path. */
-      if ((pc_flags & (PC_SYM_FOLLOW | PC_SYM_NOFOLLOW_REP)) == PC_SYM_FOLLOW)
+      if (nativeinnerlinks
+	  && (pc_flags & (PC_SYM_FOLLOW | PC_SYM_NOFOLLOW_REP)) == PC_SYM_FOLLOW)
 	{
 	  PWCHAR fpbuf = tp.w_get ();
 	  DWORD ret;
