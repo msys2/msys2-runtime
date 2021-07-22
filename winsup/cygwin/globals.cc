@@ -76,6 +76,7 @@ bool wincmdln = true;
 winsym_t allow_winsymlinks = WSYM_deepcopy;
 bool disable_pcon = true;
 bool winjitdebug = false;
+bool nativeinnerlinks = true;
 
 bool NO_COPY in_forkee;
 
