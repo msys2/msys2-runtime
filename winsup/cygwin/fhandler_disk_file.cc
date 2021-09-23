@@ -1198,6 +1198,21 @@ fhandler_disk_file::link (const char *newpath)
       return -1;
     }
 
+  if (fake_hardlinks == FHARD_always)
+    {
+      tmp_pathbuf tp;
+      char *w_newpath;
+      char *w_oldpath;
+      stpcpy (w_newpath = tp.c_get (), newpc.get_win32());
+      stpcpy (w_oldpath = tp.c_get (), pc.get_win32());
+      if (!CopyFile (w_oldpath, w_newpath, TRUE))
+        {
+          __seterrno ();
+          return - 1;
+        }
+      return 0;
+    }
+
   char new_buf[nlen + 5];
   if (!newpc.error)
     {
@@ -1250,8 +1265,27 @@ fhandler_disk_file::link (const char *newpath)
     {
       if (status == STATUS_INVALID_DEVICE_REQUEST
 	  || status == STATUS_NOT_SUPPORTED)
-	/* FS doesn't support hard links.  Linux returns EPERM. */
-	set_errno (EPERM);
+        {
+          if (fake_hardlinks == FHARD_never)
+            {
+              /* FS doesn't support hard links.  Linux returns EPERM. */
+              set_errno (EPERM);
+            }
+          else
+            {
+              tmp_pathbuf tp;
+              char *w_newpath;
+              char *w_oldpath;
+              stpcpy (w_newpath = tp.c_get (), newpc.get_win32());
+              stpcpy (w_oldpath = tp.c_get (), pc.get_win32());
+              if (!CopyFile (w_oldpath, w_newpath, TRUE))
+                {
+                  __seterrno ();
+                  return - 1;
+                }
+              return 0;
+            }
+        }
       else
 	__seterrno_from_nt_status (status);
       return -1;

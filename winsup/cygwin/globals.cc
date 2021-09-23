@@ -61,6 +61,14 @@ enum winsym_t
   WSYM_deepcopy
 };
 
+/* Should hardlinks be faked.  The value is set depending on the
+   "fakehardlinks" setting of the CYGWIN environment variable. */
+enum fakehard_t {
+  FHARD_never = 0,
+  FHARD_ondemand,
+  FHARD_always
+};
+
 exit_states NO_COPY exit_state;
 
 /* Set in init.cc.  Used to check if Cygwin DLL is dynamically loaded. */
@@ -73,6 +81,7 @@ bool pipe_byte;
 bool reset_com;
 bool wincmdln = true;
 winsym_t allow_winsymlinks = WSYM_deepcopy;
+fakehard_t fake_hardlinks = FHARD_ondemand;
 bool disable_pcon = true;
 bool winjitdebug = false;
 bool nativeinnerlinks = true;
