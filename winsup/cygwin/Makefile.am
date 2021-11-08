@@ -727,7 +727,7 @@ man_MANS = regex/regex.3 regex/regex.7
 install-exec-hook: install-libs
 install-data-local: install-headers install-ldif
 
-install-libs:
+install-libs: install-toollibDATA
 	@$(MKDIR_P) $(DESTDIR)$(bindir)
 	$(INSTALL_PROGRAM) $(TEST_DLL_NAME) $(DESTDIR)$(bindir)/$(DLL_NAME)
 	@$(MKDIR_P) $(DESTDIR)$(toollibdir)
