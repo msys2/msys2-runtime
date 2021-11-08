@@ -199,7 +199,7 @@ forcekill (pid_t pid, DWORD winpid, int sig, int wait)
         CloseHandle(h);
         h = h2;
       }
-      exit_process_tree (h2, 128 + sig);
+      exit_process_tree (h, 128 + sig);
     }
   CloseHandle (h);
 }
