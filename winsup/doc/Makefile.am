@@ -10,9 +10,7 @@ man1_MANS =
 man3_MANS =
 man5_MANS =
 
-doc_DATA = \
-	cygwin-ug-net/cygwin-ug-net.pdf \
-	cygwin-api/cygwin-api.pdf
+doc_DATA =
 
 htmldir = $(datarootdir)/doc
 
@@ -28,8 +26,7 @@ all-local: Makefile.dep \
 	cygwin-ug-net/cygwin-ug-net.html \
 	faq/faq.html faq/faq.body \
 	cygwin-ug-net/cygwin-ug-net-nochunks.html.gz \
-	api2man.stamp intro2man.stamp utils2man.stamp \
-	cygwin-api.info cygwin-ug-net.info
+	api2man.stamp intro2man.stamp utils2man.stamp
 
 clean-local:
 	rm -f Makefile.dep
@@ -69,7 +66,7 @@ install-etc:
 	@$(MKDIR_P) $(DESTDIR)$(sysconfdir)/preremove
 	$(INSTALL_SCRIPT) $(srcdir)/etc.preremove.cygwin-doc.sh $(DESTDIR)$(sysconfdir)/preremove/cygwin-doc.sh
 
-install-data-hook: install-extra-man install-html-local install-info-local install-etc
+install-data-hook: install-extra-man install-html-local install-etc
 
 uninstall-extra-man:
 	for i in *.1 ; do \
