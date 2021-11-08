@@ -84,11 +84,10 @@ AM_CONDITIONAL(BUILD_DOC, [test $enable_doc != "no"])
 AC_CHECK_PROGS([DOCBOOK2XTEXI], [docbook2x-texi db2x_docbook2texi])
 if test -z "$DOCBOOK2XTEXI" ; then
     if test "x$enable_doc" != "xno"; then
-        AC_MSG_ERROR([docbook2texi is required to build documentation])
-    else
-        unset DOCBOOK2XTEXI
-        AM_MISSING_PROG([DOCBOOK2XTEXI], [docbook2texi])
+        AC_MSG_WARN([docbook2texi is required to build documentation])
     fi
+    unset DOCBOOK2XTEXI
+    AM_MISSING_PROG([DOCBOOK2XTEXI], [docbook2texi])
 fi
 
 AC_CHECK_PROGS([XMLTO], [xmlto])
