@@ -1153,7 +1153,11 @@ fhandler_pty_slave::reset_switch_to_pcon (void)
 		    {
 		      char pipe[MAX_PATH];
 		      __small_sprintf (pipe,
+#ifdef __MSYS__
+			       "\\\\.\\pipe\\msys-%S-pty%d-master-ctl",
+#else
 			       "\\\\.\\pipe\\cygwin-%S-pty%d-master-ctl",
+#endif
 			       &cygheap->installation_key, get_minor ());
 		      pipe_request req = { GetCurrentProcessId () };
 		      pipe_reply repl;
@@ -3738,7 +3742,11 @@ fhandler_pty_slave::transfer_input (tty::xfer_dir dir, HANDLE from, tty *ttyp,
     {
       char pipe[MAX_PATH];
       __small_sprintf (pipe,
+#ifdef __MSYS__
+		       "\\\\.\\pipe\\msys-%S-pty%d-master-ctl",
+#else
 		       "\\\\.\\pipe\\cygwin-%S-pty%d-master-ctl",
+#endif
 		       &cygheap->installation_key, ttyp->get_minor ());
       pipe_request req = { GetCurrentProcessId () };
       pipe_reply repl;
