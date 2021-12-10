@@ -1247,10 +1247,13 @@ fhandler_pty_slave::mask_switch_to_pcon_in (bool mask, bool xfer)
   else if (InterlockedDecrement (&num_reader) == 0)
     CloseHandle (slave_reading);
 
+  bool need_xfer =
+    get_ttyp ()->switch_to_pcon_in && !get_ttyp ()->pcon_activated;
+
   /* In GDB, transfer input based on setpgid() does not work because
      GDB may not set terminal process group properly. Therefore,
      transfer input here if isHybrid is set. */
-  if (isHybrid && !!masked != mask && xfer
+  if ((isHybrid || need_xfer) && !!masked != mask && xfer
       && GetStdHandle (STD_INPUT_HANDLE) == get_handle ())
     {
       if (mask && get_ttyp ()->pcon_input_state_eq (tty::to_nat))
@@ -1544,7 +1547,7 @@ out:
   if (ptr0)
     { /* Not tcflush() */
       bool saw_eol = totalread > 0 && strchr ("\r\n", ptr0[totalread -1]);
-      mask_switch_to_pcon_in (false, saw_eol);
+      mask_switch_to_pcon_in (false, saw_eol || len == 0);
     }
 }
 
@@ -2224,6 +2227,15 @@ fhandler_pty_master::write (const void *ptr, size_t len)
       ReleaseMutex (input_mutex);
 
       return len;
+    }
+
+  if (to_be_read_from_pcon () && !get_ttyp ()->pcon_activated
+      && get_ttyp ()->pcon_input_state == tty::to_cyg)
+    {
+      WaitForSingleObject (input_mutex, INFINITE);
+      fhandler_pty_slave::transfer_input (tty::to_nat, from_master,
+					  get_ttyp (), input_available_event);
+      ReleaseMutex (input_mutex);
     }
 
   line_edit_status status = line_edit (p, len, ti, &ret);
