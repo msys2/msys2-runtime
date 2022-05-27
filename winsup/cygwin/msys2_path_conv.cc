@@ -602,8 +602,6 @@ void ppl_convert(const char** from, const char* to, char** dst, const char* dste
 
     if (!prev_was_simc) {
         subp_convert(&beg, it, is_url, dst, dstend);
-    } else {
-        *dst -= 1;
     }
 }
 
