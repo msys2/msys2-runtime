@@ -1983,6 +1983,7 @@ class fhandler_termios: public fhandler_base
   virtual void cleanup_before_exit () {}
   virtual bool need_console_handler () { return false; }
   virtual bool need_send_ctrl_c_event () { return true; }
+  virtual DWORD get_helper_pid () { return 0; }
 };
 
 enum ansi_intensity
@@ -2020,6 +2021,7 @@ class dev_console
 {
   pid_t owner;
   bool is_legacy;
+  bool orig_virtual_terminal_processing_mode;
 
   WORD default_color, underline_color, dim_color;
 
@@ -2088,6 +2090,7 @@ class dev_console
   char *cons_rapoi;
   bool cursor_key_app_mode;
   bool disable_master_thread;
+  bool master_thread_suspended;
   int num_processed; /* Number of input events in the current input buffer
 			already processed by cons_master_thread(). */
 
@@ -2466,6 +2469,7 @@ public:
     HANDLE from_slave_nat;
     HANDLE output_mutex;
     tty *ttyp;
+    DWORD helper_pid;
   };
 private:
   int pktmode;			// non-zero if pty in a packet mode.
@@ -2477,6 +2481,9 @@ private:
   HANDLE to_master, from_master;
   cygthread *master_fwd_thread;	// Master forwarding thread
   HANDLE thread_param_copied_event;
+  HANDLE helper_goodbye;
+  HANDLE helper_h_process;
+  DWORD helper_pid;
 
 public:
   HANDLE get_echo_handle () const { return echo_r; }
@@ -2531,6 +2538,7 @@ public:
   void get_master_fwd_thread_param (master_fwd_thread_param_t *p);
   void set_mask_flusho (bool m) { get_ttyp ()->mask_flusho = m; }
   bool need_send_ctrl_c_event ();
+  DWORD get_helper_pid () { return helper_pid; }
 };
 
 class fhandler_dev_null: public fhandler_base

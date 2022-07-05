@@ -73,19 +73,59 @@ private:
   static const size_t WPBUF_LEN = 256u;
   char buf[WPBUF_LEN];
   size_t ixput;
+  HANDLE output_handle;
 public:
+  void init (HANDLE &handle)
+  {
+    output_handle = handle;
+    empty ();
+  }
   inline void put (char x)
   {
-    if (ixput < WPBUF_LEN)
-      buf[ixput++] = x;
+    if (ixput == WPBUF_LEN)
+      send ();
+    buf[ixput++] = x;
   }
   inline void empty () { ixput = 0u; }
-  inline void send (HANDLE &handle)
+  inline void send ()
   {
+    if (!output_handle)
+      {
+	empty ();
+	return;
+      }
+    mbtowc_p f_mbtowc =
+      (__MBTOWC == __ascii_mbtowc) ? __utf8_mbtowc : __MBTOWC;
     wchar_t bufw[WPBUF_LEN];
-    DWORD len = sys_mbstowcs (bufw, WPBUF_LEN, buf, ixput);
+    DWORD len = 0;
+    mbstate_t ps;
+    memset (&ps, 0, sizeof (ps));
+    char *p = buf;
+    while (ixput)
+      {
+	int bytes = f_mbtowc (_REENT, bufw + len, p, ixput, &ps);
+	if (bytes < 0)
+	  {
+	    if ((size_t) ps.__count < ixput)
+	      { /* Discard one byte and retry. */
+		p++;
+		ixput--;
+		memset (&ps, 0, sizeof (ps));
+		continue;
+	      }
+	    /* Halfway through the multibyte char. */
+	    memmove (buf, p, ixput);
+	    break;
+	  }
+	else
+	  {
+	    len++;
+	    p += bytes;
+	    ixput -= bytes;
+	  }
+      }
     acquire_attach_mutex (mutex_timeout);
-    WriteConsoleW (handle, bufw, len, NULL, 0);
+    WriteConsoleW (output_handle, bufw, len, NULL, 0);
     release_attach_mutex ();
   }
 } wpbuf;
@@ -249,7 +289,18 @@ fhandler_console::cons_master_thread (handle_set_t *p, tty *ttyp)
   const int additional_space = 128; /* Possible max number of incoming events
 				       during the process. Additional space
 				       should be left for writeback fix. */
-  const int inrec_size = INREC_SIZE + additional_space;
+  DWORD inrec_size = INREC_SIZE + additional_space;
+  INPUT_RECORD *input_rec =
+    (INPUT_RECORD *) malloc (inrec_size * sizeof (INPUT_RECORD));
+  INPUT_RECORD *input_tmp =
+    (INPUT_RECORD *) malloc (inrec_size * sizeof (INPUT_RECORD));
+
+  if (!input_rec || !input_tmp)
+    return; /* Cannot continue */
+
+  DWORD inrec_size1 =
+    wincap.cons_need_small_input_record_buf () ? INREC_SIZE : inrec_size;
+
   struct
   {
     inline static size_t bytes (size_t n)
@@ -261,7 +312,6 @@ fhandler_console::cons_master_thread (handle_set_t *p, tty *ttyp)
   while (con.owner == myself->pid)
     {
       DWORD total_read, n, i;
-      INPUT_RECORD input_rec[inrec_size];
 
       if (con.disable_master_thread)
 	{
@@ -269,25 +319,57 @@ fhandler_console::cons_master_thread (handle_set_t *p, tty *ttyp)
 	  continue;
 	}
 
+      acquire_attach_mutex (mutex_timeout);
+      GetNumberOfConsoleInputEvents (p->input_handle, &total_read);
+      release_attach_mutex ();
+      if (total_read > INREC_SIZE)
+	{
+	  cygwait (40);
+	  acquire_attach_mutex (mutex_timeout);
+	  GetNumberOfConsoleInputEvents (p->input_handle, &n);
+	  release_attach_mutex ();
+	  if (n < total_read)
+	    {
+	      /* read() seems to be called. Process special keys
+		 in process_input_message (). */
+	      con.master_thread_suspended = true;
+	      continue;
+	    }
+	  total_read = n;
+	}
+      con.master_thread_suspended = false;
+      if (total_read + additional_space > inrec_size)
+	{
+	  DWORD new_inrec_size = total_read + additional_space;
+	  INPUT_RECORD *new_input_rec = (INPUT_RECORD *)
+	    realloc (input_rec, m.bytes (new_inrec_size));
+	  INPUT_RECORD *new_input_tmp = (INPUT_RECORD *)
+	    realloc (input_tmp, m.bytes (new_inrec_size));
+	  if (new_input_rec && new_input_tmp)
+	    {
+	      inrec_size = new_inrec_size;
+	      input_rec = new_input_rec;
+	      input_tmp = new_input_tmp;
+	      if (!wincap.cons_need_small_input_record_buf ())
+		inrec_size1 = inrec_size;
+	    }
+	}
+
       WaitForSingleObject (p->input_mutex, mutex_timeout);
       total_read = 0;
-      bool nowait = false;
       switch (cygwait (p->input_handle, (DWORD) 0))
 	{
 	case WAIT_OBJECT_0:
 	  acquire_attach_mutex (mutex_timeout);
-	  ReadConsoleInputW (p->input_handle,
-			     input_rec, INREC_SIZE, &total_read);
-	  if (total_read == INREC_SIZE /* Working space full */
-	      && cygwait (p->input_handle, (DWORD) 0) == WAIT_OBJECT_0)
+	  total_read = 0;
+	  while (cygwait (p->input_handle, (DWORD) 0) == WAIT_OBJECT_0
+		 && total_read < inrec_size)
 	    {
-	      const int incr = min (con.num_processed, additional_space);
-	      ReadConsoleInputW (p->input_handle,
-				 input_rec + total_read, incr, &n);
-	      /* Discard oldest n events. */
-	      memmove (input_rec, input_rec + n, m.bytes (total_read));
-	      con.num_processed -= n;
-	      nowait = true;
+	      DWORD len;
+	      ReadConsoleInputW (p->input_handle, input_rec + total_read,
+				 min (inrec_size - total_read, inrec_size1),
+				 &len);
+	      total_read += len;
 	    }
 	  release_attach_mutex ();
 	  break;
@@ -375,45 +457,111 @@ remove_record:
 	{
 	  do
 	    {
-	      INPUT_RECORD tmp[inrec_size];
 	      /* Writeback input records other than interrupt. */
 	      acquire_attach_mutex (mutex_timeout);
-	      WriteConsoleInputW (p->input_handle, input_rec, total_read, &n);
-	      /* Check if writeback was successfull. */
-	      PeekConsoleInputW (p->input_handle, tmp, inrec_size, &n);
+	      n = 0;
+	      while (n < total_read)
+		{
+		  DWORD len;
+		  WriteConsoleInputW (p->input_handle, input_rec + n,
+				      min (total_read - n, inrec_size1), &len);
+		  n += len;
+		}
 	      release_attach_mutex ();
-	      if (n < total_read)
+
+	      acquire_attach_mutex (mutex_timeout);
+	      GetNumberOfConsoleInputEvents (p->input_handle, &n);
+	      release_attach_mutex ();
+	      if (n + additional_space > inrec_size)
+		{
+		  DWORD new_inrec_size = n + additional_space;
+		  INPUT_RECORD *new_input_rec = (INPUT_RECORD *)
+		    realloc (input_rec, m.bytes (new_inrec_size));
+		  INPUT_RECORD *new_input_tmp = (INPUT_RECORD *)
+		    realloc (input_tmp, m.bytes (new_inrec_size));
+		  if (new_input_rec && new_input_tmp)
+		    {
+		      inrec_size = new_inrec_size;
+		      input_rec = new_input_rec;
+		      input_tmp = new_input_tmp;
+		      if (!wincap.cons_need_small_input_record_buf ())
+			inrec_size1 = inrec_size;
+		    }
+		}
+
+	      /* Check if writeback was successfull. */
+	      acquire_attach_mutex (mutex_timeout);
+	      PeekConsoleInputW (p->input_handle, input_tmp, inrec_size1, &n);
+	      release_attach_mutex ();
+	      if (n < min (total_read, inrec_size1))
 		break; /* Someone has read input without acquiring
 			  input_mutex. ConEmu cygwin-connector? */
-	      if (inrec_eq (input_rec, tmp, total_read))
+	      if (inrec_eq (input_rec, input_tmp,
+			    min (total_read, inrec_size1)))
 		break; /* OK */
 	      /* Try to fix */
 	      acquire_attach_mutex (mutex_timeout);
-	      ReadConsoleInputW (p->input_handle, tmp, inrec_size, &n);
+	      n = 0;
+	      while (cygwait (p->input_handle, (DWORD) 0) == WAIT_OBJECT_0
+		     && n < inrec_size)
+		{
+		  DWORD len;
+		  ReadConsoleInputW (p->input_handle, input_tmp + n,
+				     min (inrec_size - n, inrec_size1), &len);
+		  n += len;
+		}
 	      release_attach_mutex ();
-	      for (DWORD i = 0, j = 0; j < n; j++)
-		if (i == total_read || !inrec_eq (input_rec + i, tmp + j, 1))
-		  {
-		    if (total_read + j - i >= n)
-		      { /* Something is wrong. Giving up. */
-			acquire_attach_mutex (mutex_timeout);
-			WriteConsoleInputW (p->input_handle, tmp, n, &n);
-			release_attach_mutex ();
-			goto skip_writeback;
+	      bool fixed = false;
+	      for (DWORD ofs = n - total_read; ofs > 0; ofs--)
+		{
+		  if (inrec_eq (input_rec, input_tmp + ofs, total_read))
+		    {
+		      memcpy (input_rec + total_read, input_tmp,
+			      m.bytes (ofs));
+		      memcpy (input_rec + total_read + ofs,
+			      input_tmp + total_read + ofs,
+			      m.bytes (n - ofs - total_read));
+		      fixed = true;
+		      break;
+		    }
+		}
+	      if (!fixed)
+		{
+		  for (DWORD i = 0, j = 0; j < n; j++)
+		    if (i == total_read
+			|| !inrec_eq (input_rec + i, input_tmp + j, 1))
+		      {
+			if (total_read + j - i >= n)
+			  { /* Something is wrong. Giving up. */
+			    acquire_attach_mutex (mutex_timeout);
+			    DWORD l = 0;
+			    while (l < n)
+			      {
+				DWORD len;
+				WriteConsoleInputW (p->input_handle,
+						    input_tmp + l,
+						    min (n - l, inrec_size1),
+						    &len);
+				l += len;
+			      }
+			    release_attach_mutex ();
+			    goto skip_writeback;
+			  }
+			input_rec[total_read + j - i] = input_tmp[j];
 		      }
-		    input_rec[total_read + j - i] = tmp[j];
-		  }
-		else
-		  i++;
+		    else
+		      i++;
+		}
 	      total_read = n;
 	    }
 	  while (true);
 	}
 skip_writeback:
       ReleaseMutex (p->input_mutex);
-      if (!nowait)
-	cygwait (40);
+      cygwait (40);
     }
+  free (input_rec);
+  free (input_tmp);
 }
 
 bool
@@ -508,6 +656,7 @@ fhandler_console::setup ()
       shared_console_info->tty_min_state.is_console = true;
       con.cursor_key_app_mode = false;
       con.disable_master_thread = true;
+      con.master_thread_suspended = false;
       con.num_processed = 0;
     }
 }
@@ -561,6 +710,8 @@ fhandler_console::set_input_mode (tty::cons_mode m, const termios *t,
       break;
     case tty::cygwin:
       flags |= ENABLE_WINDOW_INPUT;
+      if (con.master_thread_suspended)
+	flags |= ENABLE_PROCESSED_INPUT;
       if (wincap.has_con_24bit_colors () && !con_is_legacy)
 	flags |= ENABLE_VIRTUAL_TERMINAL_INPUT;
       else
@@ -596,6 +747,8 @@ fhandler_console::set_output_mode (tty::cons_mode m, const termios *t,
 				   const handle_set_t *p)
 {
   DWORD flags = ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT;
+  if (con.orig_virtual_terminal_processing_mode)
+    flags |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
   WaitForSingleObject (p->output_mutex, mutex_timeout);
   switch (m)
     {
@@ -1481,6 +1634,7 @@ fhandler_console::open (int flags, mode_t)
     }
   set_output_handle (h);
   handle_set.output_handle = h;
+  wpbuf.init (get_output_handle ());
 
   setup_io_mutex ();
   handle_set.input_mutex = input_mutex;
@@ -1503,6 +1657,8 @@ fhandler_console::open (int flags, mode_t)
       /* Check xterm compatible mode in output */
       acquire_attach_mutex (mutex_timeout);
       GetConsoleMode (get_output_handle (), &dwMode);
+      con.orig_virtual_terminal_processing_mode =
+	!!(dwMode & ENABLE_VIRTUAL_TERMINAL_PROCESSING);
       if (!SetConsoleMode (get_output_handle (),
 			   dwMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING))
 	is_legacy = true;
@@ -2347,7 +2503,7 @@ fhandler_console::char_command (char c)
 	  wpbuf.put (c);
 	  if (wincap.has_con_esc_rep ())
 	    /* Just send the sequence */
-	    wpbuf.send (get_output_handle ());
+	    wpbuf.send ();
 	  else if (last_char && last_char != L'\n')
 	    {
 	      acquire_attach_mutex (mutex_timeout);
@@ -2361,7 +2517,7 @@ fhandler_console::char_command (char c)
 	  con.scroll_region.Bottom = con.args[1] ? con.args[1] - 1 : -1;
 	  wpbuf.put (c);
 	  /* Just send the sequence */
-	  wpbuf.send (get_output_handle ());
+	  wpbuf.send ();
 	  break;
 	case 'L': /* IL */
 	  if (wincap.has_con_broken_il_dl ())
@@ -2394,7 +2550,7 @@ fhandler_console::char_command (char c)
 				srBottom + 1 - con.b.srWindow.Top);
 	      WriteConsoleW (get_output_handle (), bufw, wcslen (bufw), 0, 0);
 	      wpbuf.put ('T');
-	      wpbuf.send (get_output_handle ());
+	      wpbuf.send ();
 	      __small_swprintf (bufw, L"\033[%d;%dr",
 				srTop + 1 - con.b.srWindow.Top,
 				srBottom + 1 - con.b.srWindow.Top);
@@ -2408,7 +2564,7 @@ fhandler_console::char_command (char c)
 	    {
 	      wpbuf.put (c);
 	      /* Just send the sequence */
-	      wpbuf.send (get_output_handle ());
+	      wpbuf.send ();
 	    }
 	  break;
 	case 'M': /* DL */
@@ -2431,7 +2587,7 @@ fhandler_console::char_command (char c)
 	      acquire_attach_mutex (mutex_timeout);
 	      WriteConsoleW (get_output_handle (), bufw, wcslen (bufw), 0, 0);
 	      wpbuf.put ('S');
-	      wpbuf.send (get_output_handle ());
+	      wpbuf.send ();
 	      __small_swprintf (bufw, L"\033[%d;%dr",
 				srTop + 1 - con.b.srWindow.Top,
 				srBottom + 1 - con.b.srWindow.Top);
@@ -2445,7 +2601,7 @@ fhandler_console::char_command (char c)
 	    {
 	      wpbuf.put (c);
 	      /* Just send the sequence */
-	      wpbuf.send (get_output_handle ());
+	      wpbuf.send ();
 	    }
 	  break;
 	case 'J': /* ED */
@@ -2474,13 +2630,13 @@ fhandler_console::char_command (char c)
 	    }
 	  else
 	    /* Just send the sequence */
-	    wpbuf.send (get_output_handle ());
+	    wpbuf.send ();
 	  break;
 	case 'h': /* DECSET */
 	case 'l': /* DECRST */
 	  wpbuf.put (c);
 	  /* Just send the sequence */
-	  wpbuf.send (get_output_handle ());
+	  wpbuf.send ();
 	  if (con.saw_question_mark)
 	    {
 	      bool need_fix_tab_position = false;
@@ -2509,7 +2665,7 @@ fhandler_console::char_command (char c)
 	    }
 	  wpbuf.put (c);
 	  /* Just send the sequence */
-	  wpbuf.send (get_output_handle ());
+	  wpbuf.send ();
 	  break;
 	case 'm':
 	  if (con.saw_greater_than_sign)
@@ -2517,13 +2673,13 @@ fhandler_console::char_command (char c)
 	  /* Text attribute settings */
 	  wpbuf.put (c);
 	  /* Just send the sequence */
-	  wpbuf.send (get_output_handle ());
+	  wpbuf.send ();
 	  break;
 	default:
 	  /* Other escape sequences */
 	  wpbuf.put (c);
 	  /* Just send the sequence */
-	  wpbuf.send (get_output_handle ());
+	  wpbuf.send ();
 	  break;
 	}
       return;
@@ -3374,7 +3530,7 @@ fhandler_console::write (const void *vsrc, size_t len)
 		  /* For xterm mode only */
 		  /* Just send the sequence */
 		  wpbuf.put (*src);
-		  wpbuf.send (get_output_handle ());
+		  wpbuf.send ();
 		}
 	      else if (con.savex >= 0 && con.savey >= 0)
 		cursor_set (false, con.savex, con.savey);
@@ -3388,7 +3544,7 @@ fhandler_console::write (const void *vsrc, size_t len)
 		  /* For xterm mode only */
 		  /* Just send the sequence */
 		  wpbuf.put (*src);
-		  wpbuf.send (get_output_handle ());
+		  wpbuf.send ();
 		}
 	      else
 		cursor_get (&con.savex, &con.savey);
@@ -3421,7 +3577,7 @@ fhandler_console::write (const void *vsrc, size_t len)
 		}
 	      else
 		wpbuf.put (*src);
-	      wpbuf.send (get_output_handle ());
+	      wpbuf.send ();
 	      con.state = normal;
 	      wpbuf.empty();
 	    }
@@ -3446,7 +3602,7 @@ fhandler_console::write (const void *vsrc, size_t len)
 		 handled and just sent them. */
 	      wpbuf.put (*src);
 	      /* Just send the sequence */
-	      wpbuf.send (get_output_handle ());
+	      wpbuf.send ();
 	      con.state = normal;
 	      wpbuf.empty();
 	    }
@@ -3543,7 +3699,7 @@ fhandler_console::write (const void *vsrc, size_t len)
 	    {
 	      wpbuf.put (*src);
 	      if (wincap.has_con_24bit_colors () && !con_is_legacy)
-		wpbuf.send (get_output_handle ());
+		wpbuf.send ();
 	      wpbuf.empty ();
 	      con.state = normal;
 	      src++;
@@ -3560,7 +3716,7 @@ fhandler_console::write (const void *vsrc, size_t len)
 	    if (*src < ' ')
 	      {
 		if (wincap.has_con_24bit_colors () && !con_is_legacy)
-		  wpbuf.send (get_output_handle ());
+		  wpbuf.send ();
 		else if (*src == '\007' && con.state == gettitle)
 		  set_console_title (con.my_title_buf);
 		con.state = normal;
@@ -3585,7 +3741,7 @@ fhandler_console::write (const void *vsrc, size_t len)
 	      /* Send OSC Ps; Pt BEL other than OSC Ps; ? BEL */
 	      if (wincap.has_con_24bit_colors () && !con_is_legacy
 		  && !con.saw_question_mark)
-		wpbuf.send (get_output_handle ());
+		wpbuf.send ();
 	      con.state = normal;
 	      wpbuf.empty();
 	    }
@@ -3598,7 +3754,7 @@ fhandler_console::write (const void *vsrc, size_t len)
 	      /* Send OSC Ps; Pt ST other than OSC Ps; ? ST */
 	      if (wincap.has_con_24bit_colors () && !con_is_legacy
 		  && !con.saw_question_mark)
-		wpbuf.send (get_output_handle ());
+		wpbuf.send ();
 	      con.state = normal;
 	    }
 	  else
@@ -3862,6 +4018,7 @@ fhandler_console::fixup_after_fork_exec (bool execing)
 {
   set_unit ();
   setup_io_mutex ();
+  wpbuf.init (get_output_handle ());
 
   if (!execing)
     return;
@@ -4155,5 +4312,5 @@ fhandler_console::close_handle_set (handle_set_t *p)
 bool
 fhandler_console::need_console_handler ()
 {
-  return con.disable_master_thread;
+  return con.disable_master_thread || con.master_thread_suspended;
 }

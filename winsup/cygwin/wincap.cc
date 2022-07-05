@@ -51,6 +51,8 @@ wincaps wincap_vista __attribute__((section (".cygwin_dll_common"), shared)) = {
     has_linux_tcp_keepalive_sockopts:false,
     has_tcp_maxrtms:false,
     has_query_process_handle_info:false,
+    has_broken_attach_console:true,
+    cons_need_small_input_record_buf:true,
   },
 };
 
@@ -87,6 +89,8 @@ wincaps wincap_7 __attribute__((section (".cygwin_dll_common"), shared)) = {
     has_linux_tcp_keepalive_sockopts:false,
     has_tcp_maxrtms:false,
     has_query_process_handle_info:false,
+    has_broken_attach_console:true,
+    cons_need_small_input_record_buf:true,
   },
 };
 
@@ -123,6 +127,8 @@ wincaps wincap_8 __attribute__((section (".cygwin_dll_common"), shared)) = {
     has_linux_tcp_keepalive_sockopts:false,
     has_tcp_maxrtms:false,
     has_query_process_handle_info:true,
+    has_broken_attach_console:false,
+    cons_need_small_input_record_buf:false,
   },
 };
 
@@ -159,6 +165,8 @@ wincaps wincap_8_1 __attribute__((section (".cygwin_dll_common"), shared)) = {
     has_linux_tcp_keepalive_sockopts:false,
     has_tcp_maxrtms:false,
     has_query_process_handle_info:true,
+    has_broken_attach_console:false,
+    cons_need_small_input_record_buf:false,
   },
 };
 
@@ -195,6 +203,8 @@ wincaps  wincap_10_1507 __attribute__((section (".cygwin_dll_common"), shared)) 
     has_linux_tcp_keepalive_sockopts:false,
     has_tcp_maxrtms:false,
     has_query_process_handle_info:true,
+    has_broken_attach_console:false,
+    cons_need_small_input_record_buf:false,
   },
 };
 
@@ -231,6 +241,8 @@ wincaps  wincap_10_1607 __attribute__((section (".cygwin_dll_common"), shared)) 
     has_linux_tcp_keepalive_sockopts:false,
     has_tcp_maxrtms:true,
     has_query_process_handle_info:true,
+    has_broken_attach_console:false,
+    cons_need_small_input_record_buf:false,
   },
 };
 
@@ -267,6 +279,8 @@ wincaps wincap_10_1703 __attribute__((section (".cygwin_dll_common"), shared)) =
     has_linux_tcp_keepalive_sockopts:false,
     has_tcp_maxrtms:true,
     has_query_process_handle_info:true,
+    has_broken_attach_console:false,
+    cons_need_small_input_record_buf:false,
   },
 };
 
@@ -303,6 +317,8 @@ wincaps wincap_10_1709 __attribute__((section (".cygwin_dll_common"), shared)) =
     has_linux_tcp_keepalive_sockopts:true,
     has_tcp_maxrtms:true,
     has_query_process_handle_info:true,
+    has_broken_attach_console:false,
+    cons_need_small_input_record_buf:false,
   },
 };
 
@@ -339,6 +355,8 @@ wincaps wincap_10_1803 __attribute__((section (".cygwin_dll_common"), shared)) =
     has_linux_tcp_keepalive_sockopts:true,
     has_tcp_maxrtms:true,
     has_query_process_handle_info:true,
+    has_broken_attach_console:false,
+    cons_need_small_input_record_buf:false,
   },
 };
 
@@ -375,6 +393,8 @@ wincaps wincap_10_1809 __attribute__((section (".cygwin_dll_common"), shared)) =
     has_linux_tcp_keepalive_sockopts:true,
     has_tcp_maxrtms:true,
     has_query_process_handle_info:true,
+    has_broken_attach_console:false,
+    cons_need_small_input_record_buf:false,
   },
 };
 
@@ -411,6 +431,8 @@ wincaps wincap_10_1903 __attribute__((section (".cygwin_dll_common"), shared)) =
     has_linux_tcp_keepalive_sockopts:true,
     has_tcp_maxrtms:true,
     has_query_process_handle_info:true,
+    has_broken_attach_console:false,
+    cons_need_small_input_record_buf:false,
   },
 };
 
