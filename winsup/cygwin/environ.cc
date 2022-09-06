@@ -1217,7 +1217,11 @@ build_env (const char * const *envp, PWCHAR &envblock, int &envc,
     {
       bool calc_tl = !no_envblock;
 #ifdef __MSYS__
-      if (!keep_posix)
+      if (ascii_strncasematch(*srcp, "MSYS=", 5))
+        {
+          parse_options (*srcp + 5);
+	}
+      else if (!keep_posix)
         {
           /* Don't pass timezone environment to non-msys applications */
           if (ascii_strncasematch(*srcp, "TZ=", 3))
