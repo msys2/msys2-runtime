@@ -36,6 +36,7 @@ static char **lastenviron;
 /* Parse CYGWIN options */
 
 static NO_COPY bool export_settings = false;
+static bool emptyenvvalues = true;
 
 enum settings
   {
@@ -119,6 +120,7 @@ static struct parse_thing
   } known[] NO_COPY =
 {
   {"disable_pcon", {&disable_pcon}, setbool, NULL, {{false}, {true}}},
+  {"emptyenvvalues", {&emptyenvvalues}, setbool, NULL, {{false}, {true}}},
   {"enable_pcon", {&disable_pcon}, setnegbool, NULL, {{true}, {false}}},
   {"error_start", {func: error_start_init}, isfunc, NULL, {{0}, {0}}},
   {"export", {&export_settings}, setbool, NULL, {{false}, {true}}},
@@ -1326,7 +1328,7 @@ build_env (const char * const *envp, PWCHAR &envblock, int &envc,
 	     Note that this doesn't stop invalid strings without '=' in it
 	     etc., but we're opting for speed here for now.  Adding complete
 	     checking would be pretty expensive. */
-	  if (len == 1)
+	  if (len == 1 || (!emptyenvvalues && !*rest))
 	    continue;
 
 	  /* See if this entry requires posix->win32 conversion. */
