@@ -74,7 +74,7 @@ bool pipe_byte;
 bool reset_com;
 bool wincmdln = true;
 winsym_t allow_winsymlinks = WSYM_deepcopy;
-bool disable_pcon = true;
+bool disable_pcon;
 bool winjitdebug = false;
 bool nativeinnerlinks = true;
 
