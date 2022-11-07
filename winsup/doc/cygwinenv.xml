@@ -104,7 +104,7 @@ back to the parent process.</para>
 </listitem>
 
 <listitem>
-<para><envar>winsymlinks:{lnk,native,nativestrict,sys,deepcopy}</envar></para>
+<para><envar>winsymlinks:{lnk,native,nativestrict,sys,deepcopy,nativeordeepcopy}</envar></para>
 
 <itemizedlist mark="square">
 <listitem>
@@ -140,6 +140,14 @@ will be created at the target (a "deep" copy in the case of directories, i.e.
 the source directory will be copied recursively). This mode makes a trade-off
 between compatibility and interoperability with Win32 programs, favoring the
 latter.</para>
+</listitem>
+
+<listitem>
+<para>If set to <literal>winsymlinks:nativeordeepcopy</literal> Cygwin creates
+symlinks as native Windows symlinks if supported (i.e. on file systems
+supporting symbolic links, and when the current user is permitted to create
+symbolic links, e.g. in Windows 10's "Developer Mode"), and fall back to
+creating a deep copy in case symlinks are not supported.</para>
 </listitem>
 </itemizedlist>
 
