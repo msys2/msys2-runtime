@@ -2110,6 +2110,9 @@ symlink_worker (const char *oldpath, path_conv &win32_newpath, bool isdevice)
       else if ((wsym_type == WSYM_native || wsym_type == WSYM_nativestrict)
 	       && !(win32_newpath.fs_flags () & FILE_SUPPORTS_REPARSE_POINTS))
 	wsym_type = WSYM_default;
+      else if (wsym_type == WSYM_native_or_deepcopy
+	       && !(win32_newpath.fs_flags () & FILE_SUPPORTS_REPARSE_POINTS))
+	wsym_type = WSYM_deepcopy;
 
       /* Attach .lnk suffix when shortcut is requested. */
       if (wsym_type == WSYM_lnk && !win32_newpath.exists ()
@@ -2144,6 +2147,7 @@ symlink_worker (const char *oldpath, path_conv &win32_newpath, bool isdevice)
 	  __leave;
 	case WSYM_native:
 	case WSYM_nativestrict:
+	case WSYM_native_or_deepcopy:
 	  res = symlink_native (oldpath, win32_newpath);
 	  if (!res)
 	    __leave;
@@ -2153,6 +2157,12 @@ symlink_worker (const char *oldpath, path_conv &win32_newpath, bool isdevice)
 	    {
 	      __seterrno ();
 	      __leave;
+	    }
+	  /* With deepcopy fall back? Let's do that, then */
+	  if (res == -1 && wsym_type == WSYM_native_or_deepcopy)
+	    {
+	      wsym_type = WSYM_deepcopy;
+	      break;
 	    }
 	  /* Otherwise, fall back to default symlink type. */
 	  wsym_type = WSYM_default;
