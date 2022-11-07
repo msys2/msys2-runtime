@@ -76,7 +76,7 @@ in addition to the normal UNIX argv list.  Defaults to set.</para>
 </listitem>
 
 <listitem>
-<para><envar>winsymlinks:{lnk,native,nativestrict,sys}</envar></para>
+<para><envar>winsymlinks:{lnk,native,nativestrict,sys,deepcopy}</envar></para>
 
 <itemizedlist mark="square">
 <listitem>
@@ -104,6 +104,14 @@ system call will immediately fail.</para>
 <para>If set to <literal>winsymlinks:sys</literal>, Cygwin creates symlinks as
 plain files with the <literal>system</literal> attribute, containing a magic
 cookie followed by the path to which the link points.</para>
+</listitem>
+
+<listitem>
+<para>If set to <literal>winsymlinks:deepcopy</literal>, a copy of the source
+will be created at the target (a "deep" copy in the case of directories, i.e.
+the source directory will be copied recursively). This mode makes a trade-off
+between compatibility and interoperability with Win32 programs, favoring the
+latter.
 </listitem>
 </itemizedlist>
 
