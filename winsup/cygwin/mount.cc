@@ -923,6 +923,9 @@ mount_info::conv_to_posix_path (const char *src_path, char *posix_path,
 	nextchar = 1;
 
       int addslash = nextchar > 0 ? 1 : 0;
+      /* avoid appending a slash if the result already has a trailing slash */
+      if (append_slash && mi.posix_pathlen && mi.posix_path[mi.posix_pathlen-1] == '/')
+	append_slash = addslash = 0;
       if ((mi.posix_pathlen + (pathbuflen - mi.native_pathlen) + addslash) >= NT_MAX_PATH)
 	return ENAMETOOLONG;
       strcpy (posix_path, mi.posix_path);
