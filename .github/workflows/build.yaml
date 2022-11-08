@@ -8,7 +8,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: setup-msys2
         uses: msys2/setup-msys2@v2
@@ -30,7 +30,7 @@ jobs:
           make DESTDIR="$(pwd)"/_dest install
 
       - name: Upload
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: install
           path: _dest/
