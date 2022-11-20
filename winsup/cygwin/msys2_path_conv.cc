@@ -619,7 +619,7 @@ void posix_to_win32_path(const char* from, const char* to, char** dst, const cha
         strncpy(one_path, from, to-from);
         one_path[to-from] = '\0';
 
-        path_conv conv (one_path, 0);
+        path_conv conv (one_path, PC_NOFULL);
         if (conv.error)
         {
           set_errno(conv.error);
