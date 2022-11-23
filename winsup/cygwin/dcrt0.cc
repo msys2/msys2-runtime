@@ -1360,12 +1360,25 @@ multiple_cygwin_problem (const char *what, uintptr_t magic_version, uintptr_t ve
     system_printf ("%s magic number mismatch detected - %p/%ly", what, magic_version, version);
   else
     api_fatal ("%s mismatch detected - %ly/%ly.\n\
-This problem is probably due to using incompatible versions of the cygwin DLL.\n\
+This problem is probably due to using incompatible versions of the msys2 or cygwin DLL.\n\
+msys2 uses pinned memory to share child information. All versions running must be the same magic_version.\n\
+\n\
+The magic versions are seen above as magic_version/version.\n\
+\n\
+Cygwin recommends the following fix:\n\
+If cygwin1.dll is installed then make sure there is only one version installed.\n\
 Search for cygwin1.dll using the Windows Start->Find/Search facility\n\
 and delete all but the most recent version.  The most recent version *should*\n\
 reside in x:\\cygwin\\bin, where 'x' is the drive on which you have\n\
 installed the cygwin distribution.  Rebooting is also suggested if you\n\
-are unable to find another cygwin DLL.",
+are unable to find another cygwin DLL.\n\
+\n\
+Since msys-2.0.dll may be installed in multiple stand-alone tools, make sure\n\
+each tool is using a compatible version of msys-2.0.dll, otherwise a mismatch\n\
+may occur. You can search for msys-2.0.dll across your system. See msys-2.0.dll\n\
+source code for history and what magic number is included.\n\
+\n\
+See https://www.msys2.org/docs/faq/ for more information.",
 	       what, magic_version, version);
 }
 
