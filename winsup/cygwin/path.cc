@@ -725,6 +725,7 @@ path_conv::check (const char *src, unsigned opt,
 	  /* FIXME: Do we have to worry about multiple \'s here? */
 	  component = 0;		// Number of translated components
 	  sym.contents[0] = '\0';
+	  sym.path_flags = 0;
 
 	  int symlen = 0;
 
@@ -919,7 +920,6 @@ path_conv::check (const char *src, unsigned opt,
 		{
 		  fileattr = 0;
 		  mount_flags = sym.mount_flags;
-		  path_flags = sym.path_flags;
 		  if (component)
 		    {
 		      error = ENOTDIR;
