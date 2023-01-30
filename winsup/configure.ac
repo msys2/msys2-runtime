@@ -57,6 +57,34 @@ AC_CHECK_TOOL(RANLIB, ranlib, ranlib)
 AC_CHECK_TOOL(STRIP, strip, strip)
 AC_CHECK_TOOL(WINDRES, windres, windres)
 
+# Record msys2-runtime commit
+AC_ARG_WITH([msys2-runtime-commit],
+  [AS_HELP_STRING([--with-msys2-runtime-commit=COMMIT],
+		  [indicate the msys2-runtime commit corresponding to this build])],
+  [MSYS2_RUNTIME_COMMIT=$withval], [MSYS2_RUNTIME_COMMIT=yes])
+case "$MSYS2_RUNTIME_COMMIT" in
+no)
+    MSYS2_RUNTIME_COMMIT=
+    MSYS2_RUNTIME_COMMIT_HEX=0
+    ;;
+yes|auto)
+    if MSYS2_RUNTIME_COMMIT="$(git --git-dir="$srcdir/../.git" rev-parse HEAD)"
+    then
+        MSYS2_RUNTIME_COMMIT_HEX="0x$(expr "$MSYS2_RUNTIME_COMMIT" : '\(.\{,8\}\)')ull"
+    else
+        AC_MSG_WARN([Could not determine msys2-runtime commit"])
+        MSYS2_RUNTIME_COMMIT=
+        MSYS2_RUNTIME_COMMIT_HEX=0
+    fi
+    ;;
+*)
+    expr "$MSYS2_RUNTIME_COMMIT" : '@<:@0-9a-f@:>@\{6,64\}$' ||
+    AC_MSG_ERROR([Invalid commit name: "$MSYS2_RUNTIME_COMMIT"])
+    MSYS2_RUNTIME_COMMIT_HEX="0x$(expr "$MSYS2_RUNTIME_COMMIT" : '\(.\{,8\}\)')ull"
+    ;;
+esac
+AC_SUBST(MSYS2_RUNTIME_COMMIT_HEX)
+
 AC_ARG_ENABLE(debugging,
 [AS_HELP_STRING([--enable-debugging],[Build a cygwin DLL which has more consistency checking for debugging])],
 [case "${enableval}" in
