@@ -17,6 +17,9 @@ if TARGET_X86_64
 COMMON_CFLAGS+=-mcmodel=small
 endif
 
+VERSION_CFLAGS = -DMSYS2_RUNTIME_COMMIT_HEX="@MSYS2_RUNTIME_COMMIT_HEX@"
+COMMON_CFLAGS += $(VERSION_CFLAGS)
+
 AM_CFLAGS=$(cflags_common) $(COMMON_CFLAGS)
 AM_CXXFLAGS=$(cxxflags_common) $(COMMON_CFLAGS) -fno-threadsafe-statics
 
