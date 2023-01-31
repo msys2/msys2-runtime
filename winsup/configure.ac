@@ -110,6 +110,11 @@ AC_CHECK_LIB([bfd], [bfd_init], [true],
 
 AM_CONDITIONAL(BUILD_DUMPER, [test "x$ac_cv_lib_bfd_bfd_init" = "xyes"])
 
+AC_CHECK_LIB([sframe], [sframe_decode],
+	     AC_MSG_NOTICE([Detected libsframe; Assuming that libbfd depends on it]), [true])
+
+AM_CONDITIONAL(HAVE_LIBSFRAME, [test "x$ac_cv_lib_sframe_sframe_decode" = "xyes"])
+
 AC_CONFIG_FILES([
     Makefile
     cygwin/Makefile

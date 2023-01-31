@@ -87,6 +87,10 @@ profiler_CXXFLAGS = -I$(srcdir) -idirafter ${top_srcdir}/cygwin -idirafter ${top
 profiler_LDADD = $(LDADD) -lntdll
 cygps_LDADD = $(LDADD) -lpsapi -lntdll
 
+if HAVE_LIBSFRAME
+dumper_LDADD += -lsframe
+endif
+
 if CROSS_BOOTSTRAP
 SUBDIRS = mingw
 endif
