@@ -78,7 +78,8 @@ LDADD = -lnetapi32
 cygpath_CXXFLAGS = -fno-threadsafe-statics $(AM_CXXFLAGS)
 cygpath_LDADD = $(LDADD) -luserenv -lntdll
 dumper_CXXFLAGS = -I$(top_srcdir)/../include $(AM_CXXFLAGS)
-dumper_LDADD = $(LDADD) -lpsapi -lbfd -lintl -liconv -liberty -lz -lntdll
+dumper_LDADD = $(LDADD) -lpsapi -lntdll -lbfd @BFD_LIBS@
+dumper_LDFLAGS =
 ldd_LDADD = $(LDADD) -lpsapi -lntdll
 mount_CXXFLAGS = -DFSTAB_ONLY $(AM_CXXFLAGS)
 minidumper_LDADD = $(LDADD) -ldbghelp
@@ -86,10 +87,6 @@ pldd_LDADD = $(LDADD) -lpsapi
 profiler_CXXFLAGS = -I$(srcdir) -idirafter ${top_srcdir}/cygwin -idirafter ${top_srcdir}/cygwin/include $(AM_CXXFLAGS)
 profiler_LDADD = $(LDADD) -lntdll
 cygps_LDADD = $(LDADD) -lpsapi -lntdll
-
-if HAVE_LIBSFRAME
-dumper_LDADD += -lsframe
-endif
 
 if CROSS_BOOTSTRAP
 SUBDIRS = mingw
