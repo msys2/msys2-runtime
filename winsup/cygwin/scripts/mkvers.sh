@@ -16,6 +16,7 @@ incfile="$1"; shift
 rcfile="$1"; shift
 windres="$1"; shift
 iflags=
+msys2_runtime_commit=
 # Find header file locations
 while [ -n "$*" ]; do
   case "$1" in
@@ -26,6 +27,9 @@ while [ -n "$*" ]; do
     shift
     iflags="$iflags -I$1"
       ;;
+  -DMSYS2_RUNTIME_COMMIT=*)
+    msys2_runtime_commit="${1#*=}"
+    ;;
   esac
   shift
 done
@@ -167,6 +171,10 @@ if [ -n "$cvs_tag" ]
 then
   cvs_tag="$(echo $wv_cvs_tag | sed -e 's/-branch.*//')"
   cygwin_ver="$cygwin_ver-$cvs_tag"
+fi
+if [ -n "$msys2_runtime_commit" ]
+then
+  cygwin_ver="$cygwin_ver-$msys2_runtime_commit"
 fi
 
 echo "Version $cygwin_ver"
