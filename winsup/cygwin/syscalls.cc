@@ -736,6 +736,9 @@ _unlink_nt (path_conv &pc, bool shareable)
       if (status != STATUS_CANNOT_DELETE
           && status != STATUS_INVALID_PARAMETER)
 	goto out;
+      debug_printf ("NtSetInformationFile (%S, FileDispositionInformationEx)"
+                    " returns %y with posix semantics. Disable it and retry.",
+                    pc.get_nt_native_path (), status);
     }
 
   /* If the R/O attribute is set, we have to open the file with
@@ -2689,6 +2692,11 @@ skip_pre_W10_checks:
              on a bind mounted file system in hyper-v container
              with FILE_RENAME_POSIX_SEMANTICS.
              Disable the use_posix semntics flag and retry. */
+          debug_printf ("NtSetInformationFile "
+                        "(%S, %S, FileRenameInformationEx) failed "
+                        "with posix semantics. Disable it and retry.",
+                        oldpc.get_nt_native_path (),
+                        newpc.get_nt_native_path ());
           use_posix_semantics = 0;
           goto ignore_posix_semantics_retry;
         }
