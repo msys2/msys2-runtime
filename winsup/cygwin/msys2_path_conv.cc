@@ -340,8 +340,10 @@ path_type find_path_start_and_type(const char** src, int recurse, const char* en
 
     if (*it == '\0' || it == end) return NONE;
 
-    if (!isalnum(*it) && *it != '/' && *it != '\\' && *it != ':' && *it != '-' && *it != '.') {
-        return find_path_start_and_type(move(src, 1), true, end);
+    while (!isalnum(*it) && *it != '/' && *it != '\\' && *it != ':' && *it != '-' && *it != '.') {
+        recurse = true;
+        it = ++*src;
+        if (it == end || *it == '\0') return NONE;
     }
 
     path_type result = NONE;
