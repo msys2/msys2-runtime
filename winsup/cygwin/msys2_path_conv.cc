@@ -238,6 +238,7 @@ void find_end_of_rooted_path(const char** from, const char** to, int* in_string)
 void sub_convert(const char** from, const char** to, char** dst, const char* dstend, int* in_string) {
     const char* copy_from = *from;
     path_type type = find_path_start_and_type(from, false, *to);
+    debug_printf("found type %d for path %s", type, copy_from);
 
     if (type == POSIX_PATH_LIST) {
         find_end_of_posix_list(to, in_string);
