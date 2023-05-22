@@ -4880,6 +4880,18 @@ find_fast_cwd_pointer ()
          %rcx for the subsequent RtlEnterCriticalSection call. */
       lock = (const uint8_t *) memmem ((const char *) use_cwd, 80,
                                        "\x48\x8d\x0d", 3);
+      if (lock)
+	{
+	  /* A recent Windows 11 Preview calls `lea rel(rip),%rcx' then
+	     a `mov` and a `movups` instruction, and only then
+	     `callq RtlEnterCriticalSection'.
+	     */
+	  if (memmem (lock + 7, 8, "\x4c\x89\x78\x10\x0f\x11\x40\xc8", 8))
+	    {
+	      call_rtl_offset = 15;
+	    }
+	}
+
       if (!lock)
 	{
 	  /* Windows 8.1 Preview calls `lea rel(rip),%r12' then some unrelated
