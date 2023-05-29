@@ -731,8 +731,14 @@ _unlink_nt (path_conv &pc, bool shareable)
       /* Trying to delete in-use executables and DLLs using
          FILE_DISPOSITION_POSIX_SEMANTICS returns STATUS_CANNOT_DELETE.
 	 Fall back to the default method. */
-      if (status != STATUS_CANNOT_DELETE)
+      /* Additionaly that returns STATUS_INVALID_PARAMETER
+         on a bind mounted fs in hyper-v container. Falling back too. */
+      if (status != STATUS_CANNOT_DELETE
+          && status != STATUS_INVALID_PARAMETER)
 	goto out;
+      debug_printf ("NtSetInformationFile (%S, FileDispositionInformationEx)"
+                    " returns %y with posix semantics. Disable it and retry.",
+                    pc.get_nt_native_path (), status);
     }
 
   /* If the R/O attribute is set, we have to open the file with
@@ -2435,6 +2441,7 @@ rename2 (const char *oldpath, const char *newpath, unsigned int at2flags)
 			    && !oldpc.isremote ()
 			    && oldpc.fs_is_ntfs ();
 
+ignore_posix_semantics_retry:
       /* Opening the file must be part of the transaction.  It's not sufficient
 	 to call only NtSetInformationFile under the transaction.  Therefore we
 	 have to start the transaction here, if necessary.  Don't start
@@ -2679,6 +2686,20 @@ skip_pre_W10_checks:
 	    unlink_nt (*removepc);
 	  res = 0;
 	}
+      else if (use_posix_semantics && status == STATUS_INVALID_PARAMETER)
+        {
+          /* NtSetInformationFile returns STATUS_INVALID_PARAMETER
+             on a bind mounted file system in hyper-v container
+             with FILE_RENAME_POSIX_SEMANTICS.
+             Disable the use_posix semntics flag and retry. */
+          debug_printf ("NtSetInformationFile "
+                        "(%S, %S, FileRenameInformationEx) failed "
+                        "with posix semantics. Disable it and retry.",
+                        oldpc.get_nt_native_path (),
+                        newpc.get_nt_native_path ());
+          use_posix_semantics = 0;
+          goto ignore_posix_semantics_retry;
+        }
       else
 	__seterrno_from_nt_status (status);
     }
