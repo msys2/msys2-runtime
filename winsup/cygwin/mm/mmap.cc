@@ -956,11 +956,10 @@ mmap (void *addr, size_t len, int prot, int flags, int fd, off_t off)
       HANDLE h;
       IO_STATUS_BLOCK io;
 
-      InitializeObjectAttributes (&attr, &ro_u_empty, fh->pc.objcaseinsensitive (),
-				  fh->get_handle (), NULL);
       status = NtOpenFile (&h,
 			   fh->get_access () | GENERIC_EXECUTE | SYNCHRONIZE,
-			   &attr, &io, FILE_SHARE_VALID_FLAGS,
+			   fh->pc.init_reopen_attr (attr, h), &io,
+			   FILE_SHARE_VALID_FLAGS,
 			   FILE_SYNCHRONOUS_IO_NONALERT
 			   | FILE_OPEN_FOR_BACKUP_INTENT);
       if (NT_SUCCESS (status))

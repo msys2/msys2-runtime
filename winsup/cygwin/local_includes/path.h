@@ -387,6 +387,7 @@ class path_conv
   bool fs_is_ncfsd () const {return fs.is_ncfsd ();}
   bool fs_is_afs () const {return fs.is_afs ();}
   bool fs_is_prlfs () const {return fs.is_prlfs ();}
+  bool fs_is_ramdisk () const {return fs.is_ramdisk ();}
   fs_info_type fs_type () const {return fs.what_fs ();}
   ULONG fs_serial_number () const {return fs.serial_number ();}
   inline const char *set_path (const char *p)

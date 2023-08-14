@@ -47,6 +47,7 @@ enum fs_info_type
   ncfsd,
   afs,
   prlfs,
+  ramdisk,
   /* Always last. */
   max_fs_type
 };
@@ -117,6 +118,7 @@ class fs_info
   IMPLEMENT_FS_FLAG (ncfsd)
   IMPLEMENT_FS_FLAG (afs)
   IMPLEMENT_FS_FLAG (prlfs)
+  IMPLEMENT_FS_FLAG (ramdisk)
   fs_info_type what_fs () const { return status.fs_type; }
   bool got_fs () const { return status.fs_type != none; }
 

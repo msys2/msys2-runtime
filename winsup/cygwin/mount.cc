@@ -291,6 +291,17 @@ fs_info::update (PUNICODE_STRING upath, HANDLE in_vol)
   if (!NT_SUCCESS (status))
     ffdi.DeviceType = ffdi.Characteristics = 0;
 
+  if (upath->Buffer[5] == L':' && upath->Buffer[6] == L'\\')
+   {
+     WCHAR dos[3] = {upath->Buffer[4], upath->Buffer[5], L'\0'};
+     WCHAR dev[MAX_PATH];
+     if (QueryDosDeviceW (dos, dev, MAX_PATH))
+       {
+          is_ramdisk (wcsncmp (dev, L"\\Device\\Ramdisk", 15));
+          has_buggy_reopen (is_ramdisk ());
+       }
+   }
+
   if ((ffdi.Characteristics & FILE_REMOTE_DEVICE)
       || (!ffdi.DeviceType
 	  && RtlEqualUnicodePathPrefix (attr.ObjectName, &ro_u_uncp, TRUE)))
@@ -1710,6 +1721,7 @@ fs_names_t fs_names[] = {
     { "ncfsd", false },
     { "afs", false },
     { "prlfs", false },
+    { "ramdisk", false },
     { NULL, false }
 };
 
