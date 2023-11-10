@@ -20,6 +20,9 @@ jobs:
       - name: Build
         shell: msys2 {0}
         run: |
+          # XXX: cygwin still uses gcc v11 so we get new warnings with v13,
+          # resulting in errors due to -Werror. Disable them for now.
+          export CXXFLAGS="-Wno-error=stringop-truncation -Wno-error=array-bounds -Wno-error=overloaded-virtual -Wno-narrowing -Wno-use-after-free"
           (cd winsup && ./autogen.sh)
           ./configure --disable-dependency-tracking
           make -j8
