@@ -428,7 +428,7 @@ path_type find_path_start_and_type(const char** src, int recurse, const char* en
             if (isalpha(ch) && (*(it2+1) == ':') && (*(it2+2) == '/')) {
                 return SIMPLE_WINDOWS_PATH;
             }
-            if (ch == '/'&& memchr(it2, ',', end - it) == NULL) {
+            if (ch == '/'&& memchr(it2, ',', end - it2) == NULL) {
                 *src = it2;
                 return find_path_start_and_type(src, true, end);
             }
@@ -455,7 +455,7 @@ path_type find_path_start_and_type(const char** src, int recurse, const char* en
                 } else {
                     return POSIX_PATH_LIST;
                 }
-            } else if (memchr(it2, '=', end - it) == NULL) {
+            } else if (memchr(it2, '=', end - it2) == NULL) {
                 return SIMPLE_WINDOWS_PATH;
             }
         }
