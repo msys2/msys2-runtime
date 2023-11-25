@@ -255,8 +255,13 @@ rebase_locale_buf (const void *ptrv, const void *ptrvend, const char *newbase,
 {
   const char **ptrsend = (const char **) ptrvend;
   for (const char **ptrs = (const char **) ptrv; ptrs < ptrsend; ++ptrs)
+#pragma GCC diagnostic push
+#if __GNUC__ >= 12
+#pragma GCC diagnostic ignored "-Wuse-after-free"
+#endif
     if (*ptrs >= oldbase && *ptrs < oldend)
       *ptrs += newbase - oldbase;
+#pragma GCC diagnostic pop
 }
 
 static wchar_t *
@@ -613,10 +618,15 @@ __set_lc_time_from_win (const char *name,
 		era = NULL;
 	      else
 		{
+#pragma GCC diagnostic push
+#if __GNUC__ >= 12
+#pragma GCC diagnostic ignored "-Wuse-after-free"
+#endif
 		  if (tmp != new_lc_time_buf)
 		    rebase_locale_buf (_time_locale, _time_locale + 1, tmp,
 				       new_lc_time_buf, lc_time_ptr);
 		  lc_time_ptr = tmp + (lc_time_ptr - new_lc_time_buf);
+#pragma GCC diagnostic pop
 		  new_lc_time_buf = tmp;
 		  lc_time_end = new_lc_time_buf + len;
 		}
@@ -675,9 +685,14 @@ __set_lc_time_from_win (const char *name,
       free (new_lc_time_buf);
       return -1;
     }
+#pragma GCC diagnostic push
+#if __GNUC__ >= 12
+#pragma GCC diagnostic ignored "-Wuse-after-free"
+#endif
   if (tmp != new_lc_time_buf)
     rebase_locale_buf (_time_locale, _time_locale + 1, tmp,
 		       new_lc_time_buf, lc_time_ptr);
+#pragma GCC diagnostic pop
   *lc_time_buf = tmp;
   return 1;
 }
@@ -747,9 +762,14 @@ __set_lc_ctype_from_win (const char *name,
       free (new_lc_ctype_buf);
       return -1;
     }
+#pragma GCC diagnostic push
+#if __GNUC__ >= 12
+#pragma GCC diagnostic ignored "-Wuse-after-free"
+#endif
   if (tmp != new_lc_ctype_buf)
     rebase_locale_buf (_ctype_locale, _ctype_locale + 1, tmp,
 		       new_lc_ctype_buf, lc_ctype_ptr);
+#pragma GCC diagnostic pop
   *lc_ctype_buf = tmp;
   return 1;
 }
@@ -822,9 +842,14 @@ __set_lc_numeric_from_win (const char *name,
       free (new_lc_numeric_buf);
       return -1;
     }
+#pragma GCC diagnostic push
+#if __GNUC__ >= 12
+#pragma GCC diagnostic ignored "-Wuse-after-free"
+#endif
   if (tmp != new_lc_numeric_buf)
     rebase_locale_buf (_numeric_locale, _numeric_locale + 1, tmp,
 		       new_lc_numeric_buf, lc_numeric_ptr);
+#pragma GCC diagnostic pop
   *lc_numeric_buf = tmp;
   return 1;
 }
@@ -959,9 +984,14 @@ __set_lc_monetary_from_win (const char *name,
       free (new_lc_monetary_buf);
       return -1;
     }
+#pragma GCC diagnostic push
+#if __GNUC__ >= 12
+#pragma GCC diagnostic ignored "-Wuse-after-free"
+#endif
   if (tmp != new_lc_monetary_buf)
     rebase_locale_buf (_monetary_locale, _monetary_locale + 1, tmp,
 		       new_lc_monetary_buf, lc_monetary_ptr);
+#pragma GCC diagnostic pop
   *lc_monetary_buf = tmp;
   return 1;
 }
