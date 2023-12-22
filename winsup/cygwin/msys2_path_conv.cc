@@ -346,8 +346,10 @@ path_type find_path_start_and_type(const char** src, int recurse, const char* en
      */
     const char *no_pathconv = getenv ("MSYS_NO_PATHCONV");
 
-    if (no_pathconv)
-      return NONE;
+    if (no_pathconv) {
+        *src = end;
+        return NONE;
+    }
 
     /* Let's not convert ~/.file to ~C:\msys64\.file */
     if (*it == '~') {
