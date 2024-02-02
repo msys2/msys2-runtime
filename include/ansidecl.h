@@ -283,6 +283,49 @@ So instead we use the macro below and test it against specific values.  */
 # endif /* GNUC >= 4.9 */
 #endif /* ATTRIBUTE_NO_SANITIZE_UNDEFINED */
 
+/* Attribute 'nonstring' was valid as of gcc 8.  */
+#ifndef ATTRIBUTE_NONSTRING
+# if GCC_VERSION >= 8000
+#  define ATTRIBUTE_NONSTRING __attribute__ ((__nonstring__))
+# else
+#  define ATTRIBUTE_NONSTRING
+# endif
+#endif
+
+/* Attribute `alloc_size' was valid as of gcc 4.3.  */
+#ifndef ATTRIBUTE_RESULT_SIZE_1
+# if (GCC_VERSION >= 4003)
+#  define ATTRIBUTE_RESULT_SIZE_1 __attribute__ ((alloc_size (1)))
+# else
+#  define ATTRIBUTE_RESULT_SIZE_1
+#endif
+#endif
+
+#ifndef ATTRIBUTE_RESULT_SIZE_2
+# if (GCC_VERSION >= 4003)
+#  define ATTRIBUTE_RESULT_SIZE_2 __attribute__ ((alloc_size (2)))
+# else
+#  define ATTRIBUTE_RESULT_SIZE_2
+#endif
+#endif
+
+#ifndef ATTRIBUTE_RESULT_SIZE_1_2
+# if (GCC_VERSION >= 4003)
+#  define ATTRIBUTE_RESULT_SIZE_1_2 __attribute__ ((alloc_size (1, 2)))
+# else
+#  define ATTRIBUTE_RESULT_SIZE_1_2
+#endif
+#endif
+
+/* Attribute `warn_unused_result' was valid as of gcc 3.3.  */
+#ifndef ATTRIBUTE_WARN_UNUSED_RESULT
+# if GCC_VERSION >= 3003
+#  define ATTRIBUTE_WARN_UNUSED_RESULT __attribute__ ((__warn_unused_result__))
+# else
+#  define ATTRIBUTE_WARN_UNUSED_RESULT
+# endif
+#endif
+
 /* We use __extension__ in some places to suppress -pedantic warnings
    about GCC extensions.  This feature didn't work properly before
    gcc 2.8.  */
