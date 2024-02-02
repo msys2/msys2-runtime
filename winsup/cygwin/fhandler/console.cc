@@ -4328,8 +4328,6 @@ fhandler_console::need_console_handler ()
 void
 fhandler_console::set_disable_master_thread (bool x, fhandler_console *cons)
 {
-  if (con.disable_master_thread == x)
-    return;
   if (cons == NULL)
     {
       if (cygheap->ctty && cygheap->ctty->get_major () == DEV_CONS_MAJOR)
@@ -4337,6 +4335,8 @@ fhandler_console::set_disable_master_thread (bool x, fhandler_console *cons)
       else
 	return;
     }
+  if (con.disable_master_thread == x)
+    return;
   cons->acquire_input_mutex (mutex_timeout);
   con.disable_master_thread = x;
   cons->release_input_mutex ();
