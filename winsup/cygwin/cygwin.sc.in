@@ -142,10 +142,10 @@ SECTIONS
   {
     *(.rsrc)
     *(SORT(.rsrc$*))
-    _SYM (_cygheap_start) = .;
   }
   .cygheap ALIGN(__section_alignment__) :
   {
+    _SYM (_cygheap_start) = .;
 #ifdef __x86_64__
     . = . + (3072 * 1024);
 #else
