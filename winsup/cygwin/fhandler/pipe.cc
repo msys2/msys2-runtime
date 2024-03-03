@@ -1251,6 +1251,16 @@ fhandler_pipe::get_query_hdl_per_process (WCHAR *name,
 
   for (LONG i = (LONG) n_process - 1; i >= 0; i--)
     {
+      /* Non-cygwin app may call ReadFile() which makes NtQueryObject()
+	for ObjectNameInformation block. Therefore, stop to try to get
+	query_hdl for non-cygwin apps. */
+      pid_t cygpid;
+      if (!(cygpid = cygwin_pid (proc_pids[i])))
+	continue;
+      pinfo p (cygpid);
+      if (p && ISSTATE (p, PID_NOTCYGWIN))
+	continue;
+
       HANDLE proc = OpenProcess (PROCESS_DUP_HANDLE
 				 | PROCESS_QUERY_INFORMATION,
 				 0, proc_pids[i]);
