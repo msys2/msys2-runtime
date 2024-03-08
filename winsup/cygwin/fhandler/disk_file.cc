@@ -175,7 +175,9 @@ readdir_check_reparse_point (POBJECT_ATTRIBUTES attr, bool remote)
   bool ret = false;
 
   status = NtOpenFile (&reph, READ_CONTROL, attr, &io, FILE_SHARE_VALID_FLAGS,
-		       FILE_OPEN_FOR_BACKUP_INTENT | FILE_OPEN_REPARSE_POINT);
+		       FILE_OPEN_NO_RECALL
+		       | FILE_OPEN_FOR_BACKUP_INTENT
+		       | FILE_OPEN_REPARSE_POINT);
   if (NT_SUCCESS (status))
     {
       PREPARSE_DATA_BUFFER rp = (PREPARSE_DATA_BUFFER) tp.c_get ();
@@ -326,6 +328,7 @@ fhandler_base::fstat_by_name (struct stat *buf)
       status = NtOpenFile (&dir, SYNCHRONIZE | FILE_LIST_DIRECTORY,
 			   &attr, &io, FILE_SHARE_VALID_FLAGS,
 			   FILE_SYNCHRONOUS_IO_NONALERT
+			   | FILE_OPEN_NO_RECALL
 			   | FILE_OPEN_FOR_BACKUP_INTENT
 			   | FILE_DIRECTORY_FILE);
       if (!NT_SUCCESS (status))
@@ -609,7 +612,8 @@ fhandler_disk_file::fstatvfs (struct statvfs *sfs)
       opened = NT_SUCCESS (NtOpenFile (&fh, READ_CONTROL,
 				       pc.get_object_attr (attr, sec_none_nih),
 				       &io, FILE_SHARE_VALID_FLAGS,
-				       FILE_OPEN_FOR_BACKUP_INTENT));
+				       FILE_OPEN_NO_RECALL
+				       | FILE_OPEN_FOR_BACKUP_INTENT));
       if (!opened)
 	{
 	  /* Can't open file.  Try again with parent dir. */
@@ -618,7 +622,8 @@ fhandler_disk_file::fstatvfs (struct statvfs *sfs)
 	  attr.ObjectName = &dirname;
 	  opened = NT_SUCCESS (NtOpenFile (&fh, READ_CONTROL, &attr, &io,
 					   FILE_SHARE_VALID_FLAGS,
-					   FILE_OPEN_FOR_BACKUP_INTENT));
+					   FILE_OPEN_NO_RECALL
+					   | FILE_OPEN_FOR_BACKUP_INTENT));
 	  if (!opened)
 	    goto out;
 	}
@@ -2054,7 +2059,8 @@ readdir_get_ino (const char *path, bool dot_dot)
 	   || NT_SUCCESS (NtOpenFile (&hdl, READ_CONTROL,
 				      pc.get_object_attr (attr, sec_none_nih),
 				      &io, FILE_SHARE_VALID_FLAGS,
-				      FILE_OPEN_FOR_BACKUP_INTENT
+				      FILE_OPEN_NO_RECALL
+				      | FILE_OPEN_FOR_BACKUP_INTENT
 				      | (pc.is_known_reparse_point ()
 				      ? FILE_OPEN_REPARSE_POINT : 0)))
 	  )
@@ -2103,8 +2109,9 @@ fhandler_disk_file::readdir_helper (DIR *dir, dirent *de, DWORD w32_err,
      Mountpoints and unknown or unhandled reparse points will be treated
      as normal file/directory/unknown. In all cases, returning the INO of
      the reparse point (not of the target) matches behavior of posix systems.
+     Unless the file is OFFLINE. *.
      */
-  if (attr & FILE_ATTRIBUTE_REPARSE_POINT)
+  if ((attr & FILE_ATTRIBUTE_REPARSE_POINT) && !isoffline (attr))
     {
       OBJECT_ATTRIBUTES oattr;
 
@@ -2345,7 +2352,8 @@ go_ahead:
 					 &nfs_aol_ffei, sizeof nfs_aol_ffei)
 			 : NtOpenFile (&hdl, READ_CONTROL, &attr, &io,
 				       FILE_SHARE_VALID_FLAGS,
-				       FILE_OPEN_FOR_BACKUP_INTENT
+				       FILE_OPEN_NO_RECALL
+				       | FILE_OPEN_FOR_BACKUP_INTENT
 				       | FILE_OPEN_REPARSE_POINT);
 	      if (NT_SUCCESS (f_status))
 		{

@@ -477,6 +477,7 @@ LoadDLLfuncEx (SetThreadDescription, 8, KernelBase, 1)
 LoadDLLfunc (VirtualAlloc2, 28, KernelBase)
 
 LoadDLLfunc (NtMapViewOfSectionEx, 36, ntdll)
+LoadDLLfuncEx (RtlSetProcessPlaceholderCompatibilityMode, 4, ntdll, 1)
 
 LoadDLLfunc (ldap_bind_s, 0, wldap32)
 LoadDLLfunc (ldap_count_entries, 0, wldap32)
