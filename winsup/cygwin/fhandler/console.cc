@@ -361,6 +361,12 @@ fhandler_console::cons_master_thread (handle_set_t *p, tty *ttyp)
 	}
 
       WaitForSingleObject (p->input_mutex, mutex_timeout);
+      /* Ensure accessing input recored is not disabled. */
+      if (con.disable_master_thread)
+	{
+	  ReleaseMutex (p->input_mutex);
+	  continue;
+	}
       total_read = 0;
       switch (cygwait (p->input_handle, (DWORD) 0))
 	{
@@ -1005,10 +1011,14 @@ fhandler_console::read (void *pv, size_t& buflen)
 
   push_process_state process_state (PID_TTYIN);
 
-  int copied_chars = 0;
+  size_t copied_chars = 0;
 
-  DWORD timeout = is_nonblocking () ? 0 : INFINITE;
+  DWORD timeout = is_nonblocking () ? 0 :
+    (get_ttyp ()->ti.c_lflag & ICANON ? INFINITE :
+     (get_ttyp ()->ti.c_cc[VMIN] == 0 ? 0 :
+      (get_ttyp ()->ti.c_cc[VTIME]*100 ? : INFINITE)));
 
+read_more:
   while (!input_ready && !get_cons_readahead_valid ())
     {
       int bgres;
@@ -1031,6 +1041,11 @@ wait_retry:
 	  pthread::static_cancel_self ();
 	  /*NOTREACHED*/
 	case WAIT_TIMEOUT:
+	  if (copied_chars)
+	    {
+	      buflen = copied_chars;
+	      return;
+	    }
 	  set_sig_errno (EAGAIN);
 	  buflen = (size_t) -1;
 	  return;
@@ -1076,18 +1091,19 @@ wait_retry:
     }
 
   /* Check console read-ahead buffer filled from terminal requests */
-  while (con.cons_rapoi && *con.cons_rapoi && buflen)
-    {
-      buf[copied_chars++] = *con.cons_rapoi++;
-      buflen --;
-    }
+  while (con.cons_rapoi && *con.cons_rapoi && buflen > copied_chars)
+    buf[copied_chars++] = *con.cons_rapoi++;
 
   copied_chars +=
-    get_readahead_into_buffer (buf + copied_chars, buflen);
+    get_readahead_into_buffer (buf + copied_chars, buflen - copied_chars);
 
   if (!con_ra.ralen)
     input_ready = false;
   release_input_mutex ();
+
+  if (buflen > copied_chars && !(get_ttyp ()->ti.c_lflag & ICANON)
+      && copied_chars < get_ttyp ()->ti.c_cc[VMIN])
+    goto read_more;
 
 #undef buf
 
@@ -4328,8 +4344,6 @@ fhandler_console::need_console_handler ()
 void
 fhandler_console::set_disable_master_thread (bool x, fhandler_console *cons)
 {
-  if (con.disable_master_thread == x)
-    return;
   if (cons == NULL)
     {
       if (cygheap->ctty && cygheap->ctty->get_major () == DEV_CONS_MAJOR)
