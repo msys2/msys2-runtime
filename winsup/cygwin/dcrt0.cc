@@ -530,7 +530,7 @@ get_cygwin_startup_info ()
   child_info *res = (child_info *) si.lpReserved2;
 
   if (si.cbReserved2 < EXEC_MAGIC_SIZE || !res
-      || res->intro != PROC_MAGIC_GENERIC || res->magic != CHILD_INFO_MAGIC)
+      || res->intro != PROC_MAGIC_GENERIC || res->magic != (CHILD_INFO_MAGIC ^ MSYS2_RUNTIME_COMMIT_HEX))
     {
       strace.activate (false);
       res = NULL;
