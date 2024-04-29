@@ -238,7 +238,7 @@ void find_end_of_rooted_path(const char** from, const char** to, int* in_string)
 void sub_convert(const char** from, const char** to, char** dst, const char* dstend, int* in_string) {
     const char* copy_from = *from;
     path_type type = find_path_start_and_type(from, false, *to);
-    debug_printf("found type %d for path %s", type, copy_from);
+    debug_printf("found type %d for path %s\n", type, copy_from);
 
     if (type == POSIX_PATH_LIST) {
         find_end_of_posix_list(to, in_string);
@@ -371,6 +371,28 @@ skip_p2w:
 			(it[2] == ':' || it[2] == '/'))));
 
     /*
+     * Determine if assignment to an environment variable takes place (and
+     * skip Git/SCP handling if so)
+     */
+    bool potential_command_scope_env = false;
+    if (isalpha(*it) || *it == '_' || *it == '-') {
+        ++it;
+
+        if (it != end) {
+            if (*it == '-')
+                ++it;
+
+            while (it != end && *it && (isalnum(*it) || *it == '_')) {
+                ++it;
+            }
+
+            if (*it == '=')
+                potential_command_scope_env = true;
+        }
+        it = *src;
+    }
+
+    /*
      * Prevent Git's :file.txt and :/message syntax from beeing modified.
      */
     if (*it == ':')
@@ -395,7 +417,7 @@ skip_p2w:
                 goto skip_p2w;
 
             // Leave Git's <rev>:./name syntax alone
-            if (!potential_path_list && it + 1 < end && it[1] == '.') {
+            if (!potential_path_list && !potential_command_scope_env && it + 1 < end && it[1] == '.') {
                 if (it + 2 < end && it[2] == '/')
                     goto skip_p2w;
                 if (it + 3 < end && it[2] == '.' && it[3] == '/')
@@ -718,4 +740,3 @@ void posix_to_win32_path(const char* from, const char* to, char** dst, const cha
         }
     }
 }
-
