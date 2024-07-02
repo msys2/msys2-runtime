@@ -360,15 +360,15 @@ skip_p2w:
 
     /*
      * Discern between Git's `<rev>:<path>`, SCP's `<host>:<path>` pattern
-     * (which is not a path list but may naïvely look like one) on the one
+     * (which is not a path list but may naively look like one) on the one
      * hand, and path lists starting with `/<path>`, `./<path>` or `../<path>`
      * on the other hand.
      */
     bool potential_path_list = *it == '/' ||
-	    (*it == '.' &&
-		(it[1] == ':' || it[1] == '/' ||
-		 (it[1] == '.' &&
-			(it[2] == ':' || it[2] == '/'))));
+        (*it == '.' &&
+         (it + 1 == end || it[1] == '\0' || it[1] == ':' || it[1] == '/' ||
+          (it[1] == '.' &&
+           (it + 2 == end || it[2] == '\0' || it[2] == ':' || it[2] == '/'))));
 
     /*
      * Determine if assignment to an environment variable takes place (and
