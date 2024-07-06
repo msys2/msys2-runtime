@@ -1012,7 +1012,7 @@ struct spenv
 static NO_COPY spenv spenvs[] =
 {
 #ifdef DEBUGGING
-  {NL ("MSYS_DEBUG="), false, true, NULL},
+  {NL ("CYGWIN_DEBUG="), false, true, NULL},
 #endif
   {NL ("HOMEDRIVE="), false, false, &cygheap_user::env_homedrive},
   {NL ("HOMEPATH="), false, false, &cygheap_user::env_homepath},
