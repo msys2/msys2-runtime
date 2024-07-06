@@ -558,7 +558,7 @@ static void
 cygwin_info (HANDLE h)
 {
   char *buf, *bufend, *buf_start = NULL;
-  const char *hello = "    Msys DLL version info:\n";
+  const char *hello = "    Cygwin DLL version info:\n";
   DWORD size = GetFileSize (h, NULL);
   DWORD n;
 
@@ -1290,7 +1290,7 @@ dump_sysinfo_services ()
 
   /* inform the user if nothing found */
   if (no_services)
-    puts ("No Msys services found.\n");
+    puts ("No Cygwin services found.\n");
 }
 
 enum handle_reg_t
@@ -1305,7 +1305,7 @@ handle_reg_installation (handle_reg_t what)
   HKEY key;
 
   if (what == PRINT_KEY)
-    printf ("Msys installations found in the registry:\n");
+    printf ("Cygwin installations found in the registry:\n");
   for (int i = 0; i < 2; ++i)
     if (RegOpenKeyEx (i ? HKEY_CURRENT_USER : HKEY_LOCAL_MACHINE,
 		      "SOFTWARE\\Msys\\Installations", 0,
@@ -1404,7 +1404,7 @@ dump_sysinfo ()
       _wputenv (comspec);
     }
 
-  printf ("\nMsys Configuration Diagnostics\n");
+  printf ("\nCygwin Configuration Diagnostics\n");
   time (&now);
   printf ("Current System Time: %s\n", ctime (&now));
 
@@ -1732,7 +1732,7 @@ dump_sysinfo ()
 
 
   if (givehelp)
-    printf ("Here's some environment variables that may affect msys:\n");
+    printf ("Here's some environment variables that may affect cygwin:\n");
   for (i = 0; environ[i]; i++)
     {
       char *eq = strchr (environ[i], '=');
@@ -1960,7 +1960,7 @@ dump_sysinfo ()
   printf ("\n");
 
   if (givehelp)
-    printf ("Looking for various Msys DLLs...  (-v gives version info)\n");
+    printf ("Looking for various Cygwin DLLs...  (-v gives version info)\n");
   int cygwin_dll_count = 0;
   char cygdll_path[32768];
   for (pathlike *pth = paths; pth->dir; pth++)
@@ -2992,8 +2992,8 @@ static char opts[] = "cdnsrvkfliephV";
 static void
 print_version ()
 {
-  printf ("cygcheck (msys) %d.%d.%d\n"
-	  "System Checker for Msys\n"
+  printf ("cygcheck (cygwin) %d.%d.%d\n"
+	  "System Checker for Cygwin\n"
 	  "Copyright (C) 1998 - %s Cygwin Authors\n"
 	  "This is free software; see the source for copying conditions.  "
 	  "There is NO\n"

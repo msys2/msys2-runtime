@@ -388,12 +388,12 @@ check_sanity_and_sync (per_process *p)
 
   /* magic_biscuit must be SIZEOF_PER_PROCESS.  */
   if (p->magic_biscuit != SIZEOF_PER_PROCESS)
-    api_fatal ("Incompatible msys .dll -- incompatible per_process info %u != %u",
+    api_fatal ("Incompatible cygwin .dll -- incompatible per_process info %u != %u",
 	       p->magic_biscuit, SIZEOF_PER_PROCESS);
 
   /* Complain if incompatible API changes made */
   if (p->api_major > cygwin_version.api_major)
-    api_fatal ("msys DLL and APP are out of sync -- API version mismatch %u > %u",
+    api_fatal ("cygwin DLL and APP are out of sync -- API version mismatch %u > %u",
 	       p->api_major, cygwin_version.api_major);
 }
 
