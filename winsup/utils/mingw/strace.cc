@@ -835,7 +835,7 @@ dotoggle (pid_t pid)
   child_pid = (DWORD) cygwin_internal (CW_CYGWIN_PID_TO_WINPID, pid);
   if (!child_pid)
     {
-      warn (0, "no such msys pid - %d", pid);
+      warn (0, "no such cygwin pid - %d", pid);
       child_pid = pid;
     }
   if (cygwin_internal (CW_STRACE_TOGGLE, child_pid))

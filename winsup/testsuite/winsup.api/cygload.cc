@@ -152,7 +152,7 @@ cygwin::connector::connector (const char *dll)
   if ((_library = LoadLibrary (dll)) == NULL)
     throw windows_error ("LoadLibrary", dll);
 
-  *out << "Initializing msys..." << endl;
+  *out << "Initializing cygwin..." << endl;
 
   // This calls dcrt0.cc:msys_dll_init(), which calls dll_crt0_1(),
   // which will, among other things:
