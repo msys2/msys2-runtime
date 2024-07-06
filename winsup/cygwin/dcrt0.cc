@@ -488,12 +488,12 @@ break_here ()
 static void
 initial_env ()
 {
-  if (GetEnvironmentVariableA ("MSYS_TESTING", NULL, 0))
+  if (GetEnvironmentVariableA ("CYGWIN_TESTING", NULL, 0))
     _cygwin_testing = 1;
 
 #ifdef DEBUGGING
   char buf[PATH_MAX];
-  if (GetEnvironmentVariableA ("MSYS_DEBUG", buf, sizeof (buf) - 1))
+  if (GetEnvironmentVariableA ("CYGWIN_DEBUG", buf, sizeof (buf) - 1))
     {
       char buf1[PATH_MAX];
       GetModuleFileName (NULL, buf1, PATH_MAX);
@@ -1294,7 +1294,7 @@ multiple_cygwin_problem (const char *what, uintptr_t magic_version, uintptr_t ve
       return;
     }
 
-  if (GetEnvironmentVariableA ("MSYS_MISMATCH_OK", NULL, 0))
+  if (GetEnvironmentVariableA ("CYGWIN_MISMATCH_OK", NULL, 0))
     return;
 
   if (CYGWIN_VERSION_MAGIC_VERSION (magic_version) == version)
@@ -1314,7 +1314,7 @@ are unable to find another cygwin DLL.",
 void
 cygbench (const char *s)
 {
-  if (GetEnvironmentVariableA ("MSYS_BENCH", NULL, 0))
+  if (GetEnvironmentVariableA ("CYGWIN_BENCH", NULL, 0))
     small_printf ("%05u ***** %s : %10d\n", GetCurrentProcessId (), s, strace.microseconds ());
 }
 #endif
