@@ -417,7 +417,8 @@ proc_terminate ()
 	  if (!have_execed || !have_execed_cygwin)
 	    chld_procs[i]->ppid = 1;
 	  if (chld_procs[i].wait_thread)
-	    chld_procs[i].wait_thread->terminate_thread ();
+	    if (!CancelSynchronousIo (chld_procs[i].wait_thread->thread_handle ()))
+	      chld_procs[i].wait_thread->terminate_thread ();
 	  /* Release memory associated with this process unless it is 'myself'.
 	     'myself' is only in the chld_procs table when we've execed.  We
 	     reach here when the next process has finished initializing but we
