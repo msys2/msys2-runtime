@@ -1216,6 +1216,9 @@ proc_waiter (void *arg)
       if (!ReadFile (vchild.rd_proc_pipe, &buf, 1, &nb, NULL)
 	  && (err = GetLastError ()) != ERROR_BROKEN_PIPE)
 	{
+	  /* ERROR_OPERATION_ABORTED is expected due to the possibility that
+	     CancelSynchronousIo interruped the ReadFile call, so don't output
+	     that error */
 	  if (err != ERROR_OPERATION_ABORTED)
 	    system_printf ("error on read of child wait pipe %p, %E", vchild.rd_proc_pipe);
 	  break;
