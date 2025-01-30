@@ -1735,6 +1735,7 @@ recursiveCopy (PUNICODE_STRING src, PUNICODE_STRING dst, PCWSTR origpath)
   findfiles = FindNextFileW (dH, &dHfile);
   while (findfiles)
     {
+      bool isdirlink = false;
       /* Append the directory item filename to both source and destination */
       debug_printf ("dHfile(3): %W", dHfile.cFileName);
       src->Length = srcpos + sizeof (WCHAR);
@@ -1742,25 +1743,44 @@ recursiveCopy (PUNICODE_STRING src, PUNICODE_STRING dst, PCWSTR origpath)
       RtlAppendUnicodeToString (src, dHfile.cFileName);
       RtlAppendUnicodeToString (dst, dHfile.cFileName);
       debug_printf ("%S -> %S", src, dst);
-      if (dHfile.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+      if ((dHfile.dwFileAttributes &
+	    (FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_REPARSE_POINT)) ==
+	  (FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_REPARSE_POINT))
+	{
+	  /* this sucks hard */
+	  path_conv pc (src, PC_SYM_NOFOLLOW|PC_SYM_NOFOLLOW_REP);
+	  isdirlink = pc.issymlink ();
+	}
+      if (isdirlink)
         {
-          /* Recurse into the child directory */
-          debug_printf ("%S <-> %W", src, origpath);
+	  /* CreateDirectoryEx seems to "copy" directory reparse points, which
+	     CopyFileEx can only do with a flag introduced in 19041. */
+	  if (!CreateDirectoryExW (src->Buffer, dst->Buffer, NULL))
+	    {
+	      debug_printf ("CreateDirectoryExW(%S, %S, 0) failed", src, dst);
+	      __seterrno ();
+	      goto done;
+	    }
+	}
+      else if (dHfile.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+	{
+	  /* Recurse into the child directory */
+	  debug_printf ("%S <-> %W", src, origpath);
 	  // avoids endless recursion
-          if (wcsncmp (src->Buffer, origpath, src->Length / sizeof (WCHAR)))
-            if (recursiveCopy (src, dst, origpath))
-              goto done;
-        }
+	  if (wcsncmp (src->Buffer, origpath, src->Length / sizeof (WCHAR)))
+	    if (recursiveCopy (src, dst, origpath))
+	      goto done;
+	}
       else
-        {
-          /* Just copy the file */
-          if (!CopyFileExW (src->Buffer, dst->Buffer, NULL, NULL, NULL,
+	{
+	  /* Just copy the file */
+	  if (!CopyFileExW (src->Buffer, dst->Buffer, NULL, NULL, NULL,
 			    COPY_FILE_COPY_SYMLINK))
-            {
-              __seterrno ();
-              goto done;
-            }
-        }
+	    {
+	      __seterrno ();
+	      goto done;
+	    }
+	}
       findfiles = FindNextFileW (dH, &dHfile);
     }
   if (GetLastError() != ERROR_NO_MORE_FILES)
@@ -2132,17 +2152,41 @@ symlink_deepcopy (const char *oldpath, path_conv &win32_newpath)
     }
   else
     {
-      if (!CopyFileExW (w_oldpath->Buffer, w_newpath->Buffer,
-			NULL, NULL, NULL, COPY_FILE_COPY_SYMLINK))
+      bool isdirlink = false;
+      if (win32_oldpath.issymlink () &&
+	  win32_oldpath.is_known_reparse_point ())
+	{
+	  /* Is there a better way to know this? */
+	  DWORD attr = getfileattr (win32_oldpath.get_win32 (),
+				    !!win32_oldpath.objcaseinsensitive ());
+	  if (attr == INVALID_FILE_ATTRIBUTES)
+	    {
+	      __seterrno ();
+	      return -1;
+	    }
+	  isdirlink = attr & FILE_ATTRIBUTE_DIRECTORY;
+	}
+      if (isdirlink)
+        {
+	  /* CreateDirectoryEx seems to "copy" directory reparse points, which
+	     CopyFileEx can only do with a flag introduced in 19041. */
+	  if (!CreateDirectoryExW (w_oldpath->Buffer, w_newpath->Buffer, NULL))
+	    {
+	      debug_printf ("CreateDirectoryExW(%S, %S, 0) failed", w_oldpath,
+			    w_newpath);
+	      __seterrno ();
+	      return -1;
+	    }
+	}
+      else if (!CopyFileExW (w_oldpath->Buffer, w_newpath->Buffer, NULL, NULL,
+			NULL, COPY_FILE_COPY_SYMLINK))
 	{
 	  __seterrno ();
 	  return -1;
 	}
-      else
-	{
-	  return 0;
-	}
     }
+
+  return 0;
 }
 
 int
