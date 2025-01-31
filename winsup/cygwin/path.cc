@@ -1706,7 +1706,8 @@ recursiveCopyCheckSymlink(PUNICODE_STRING src, bool& isdirlink)
   Create a deep copy of src as dst, while avoiding descending in origpath.
 */
 static int
-recursiveCopy (PUNICODE_STRING src, PUNICODE_STRING dst, PCWSTR origpath, PWIN32_FIND_DATAW dHfile = NULL)
+recursiveCopy (PUNICODE_STRING src, PUNICODE_STRING dst, USHORT origsrclen,
+	       USHORT origdstlen, PWIN32_FIND_DATAW dHfile = NULL)
 {
   HANDLE dH = INVALID_HANDLE_VALUE;
   NTSTATUS status;
@@ -1812,11 +1813,15 @@ recursiveCopy (PUNICODE_STRING src, PUNICODE_STRING dst, PCWSTR origpath, PWIN32
       else if (dHfile->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 	{
 	  /* Recurse into the child directory */
-	  debug_printf ("%S <-> %W", src, origpath);
-	  // avoids endless recursion
-	  if (wcsncmp (src->Buffer, origpath, src->Length / sizeof (WCHAR)))
-	    if (recursiveCopy (src, dst, origpath, dHfile))
+	  /* avoids endless recursion */
+	  if (src->Length <= origsrclen ||
+	      !wcsncmp (src->Buffer, dst->Buffer, origdstlen / sizeof (WCHAR)))
+	    {
+	      set_errno (ELOOP);
 	      goto done;
+	    }
+	  if (recursiveCopy (src, dst, origsrclen, origdstlen, dHfile))
+	    goto done;
 	}
       else
 	{
@@ -2193,13 +2198,13 @@ symlink_deepcopy (const char *oldpath, path_conv &win32_newpath)
     w_newpath->Buffer[1] = L'\\';
   if (win32_oldpath.isdir ())
     {
-      PWCHAR origpath = win32_oldpath.get_wide_win32_path (tp.w_get ());
       /* we need a larger UNICODE_STRING MaximumLength than
 	 get_nt_native_path allocates for the recursive copy */
       UNICODE_STRING u_oldpath, u_newpath;
       RtlCopyUnicodeString (tp.u_get (&u_oldpath), w_oldpath);
       RtlCopyUnicodeString (tp.u_get (&u_newpath), w_newpath);
-      return recursiveCopy (&u_oldpath, &u_newpath, origpath);
+      return recursiveCopy (&u_oldpath, &u_newpath,
+			    u_oldpath.Length, u_newpath.Length);
     }
   else
     {
