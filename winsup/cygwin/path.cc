@@ -1697,7 +1697,6 @@ recursiveCopy (PUNICODE_STRING src, PUNICODE_STRING dst, PCWSTR origpath)
 {
   WIN32_FIND_DATAW dHfile;
   HANDLE dH = INVALID_HANDLE_VALUE;
-  BOOL findfiles;
   int srcpos = src->Length;
   int dstpos = dst->Length;
   int res = -1;
@@ -1729,15 +1728,15 @@ recursiveCopy (PUNICODE_STRING src, PUNICODE_STRING dst, PCWSTR origpath)
   dH = FindFirstFileExW (src->Buffer, FindExInfoBasic, &dHfile,
 			 FindExSearchNameMatch, NULL,
 			 FIND_FIRST_EX_LARGE_FETCH);
-  debug_printf ("dHfile(1): %W", dHfile.cFileName);
-  findfiles = FindNextFileW (dH, &dHfile);
-  debug_printf ("dHfile(2): %W", dHfile.cFileName);
-  findfiles = FindNextFileW (dH, &dHfile);
-  while (findfiles)
+  do
     {
       bool isdirlink = false;
+      debug_printf ("dHfile: %W", dHfile.cFileName);
+      if (dHfile.cFileName[0] == L'.' &&
+	  (!dHfile.cFileName[1] ||
+	   (dHfile.cFileName[1] == L'.' && !dHfile.cFileName[2])))
+	continue;
       /* Append the directory item filename to both source and destination */
-      debug_printf ("dHfile(3): %W", dHfile.cFileName);
       src->Length = srcpos + sizeof (WCHAR);
       dst->Length = dstpos + sizeof (WCHAR);
       RtlAppendUnicodeToString (src, dHfile.cFileName);
@@ -1781,8 +1780,9 @@ recursiveCopy (PUNICODE_STRING src, PUNICODE_STRING dst, PCWSTR origpath)
 	      goto done;
 	    }
 	}
-      findfiles = FindNextFileW (dH, &dHfile);
     }
+  while (FindNextFileW (dH, &dHfile));
+
   if (GetLastError() != ERROR_NO_MORE_FILES)
     {
       __seterrno ();
