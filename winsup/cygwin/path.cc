@@ -2212,25 +2212,7 @@ symlink_deepcopy (const char *oldpath, path_conv &win32_newpath)
   tmp_pathbuf tp;
   path_conv win32_oldpath;
 
-  /* **BEGIN** replace this with
-     resolve_symlink_target (oldpath, win32_newpath. win32_oldpath);
-     when rebasing over 5a706ff0fceb83fd1fe7f072fc28a741fdde65f2
-     (probably Cygwin 3.6) */
-  /* The symlink target is relative to the directory in which the
-     symlink gets created, not relative to the cwd.  Therefore we
-     have to mangle the path quite a bit before calling path_conv.*/
-  if (isabspath (oldpath))
-    win32_oldpath.check (oldpath, PC_SYM_NOFOLLOW, stat_suffixes);
-  else
-    {
-      size_t len = strrchr (win32_newpath.get_posix (), '/')
-		    - win32_newpath.get_posix () + 1;
-      char *absoldpath = tp.t_get ();
-      stpcpy (stpncpy (absoldpath, win32_newpath.get_posix (), len),
-	      oldpath);
-      win32_oldpath.check (absoldpath, PC_SYM_NOFOLLOW, stat_suffixes);
-    }
-  /* **END** */
+  resolve_symlink_target (oldpath, win32_newpath, win32_oldpath);
   if (win32_oldpath.error)
     {
       set_errno (win32_oldpath.error);
