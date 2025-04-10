@@ -1855,7 +1855,9 @@ recursiveCopy (PUNICODE_STRING src, PUNICODE_STRING dst, USHORT origsrclen,
 	  /* Recurse into the child directory */
 	  /* avoids endless recursion */
 	  if (src->Length <= origsrclen ||
-	      !wcsncmp (src->Buffer, dst->Buffer, origdstlen / sizeof (WCHAR)))
+	      (!wcsncmp (src->Buffer, dst->Buffer, origdstlen / sizeof (WCHAR)) &&
+	       (!src->Buffer[origdstlen / sizeof (WCHAR)] ||
+		iswdirsep(src->Buffer[origdstlen / sizeof (WCHAR)]))))
 	    {
 	      set_errno (ELOOP);
 	      goto done;
