@@ -24,24 +24,6 @@ extern "C" int getdomainname (char *__name, size_t __len);
 #define ATTRIBUTE_NONSTRING
 #endif
 
-static const char*
-get_sysname()
-{
-#ifdef __MSYS__
-  char* msystem = getenv("MSYSTEM");
-  if (!msystem || strcmp(msystem, "MSYS") == 0)
-    return "MSYS";
-  else if (strcmp(msystem, "CYGWIN") == 0)
-    return "CYGWIN";
-  else if (strstr(msystem, "32") != NULL)
-    return "MINGW32";
-  else
-    return "MINGW64";
-#else
-  return "CYGWIN";
-#endif
-}
-
 /* uname: POSIX 4.4.1.1 */
 
 /* New entrypoint for applications since API 335 */
@@ -55,9 +37,12 @@ uname_x (struct utsname *name)
 
       memset (name, 0, sizeof (*name));
       /* sysname */
-      const char* sysname = get_sysname();
+      char* msystem = getenv("MSYSTEM");
+      const char* msystem_sysname = "MSYS";
+      if (msystem != NULL && *msystem && strcmp(msystem, "MSYS") != 0)
+        msystem_sysname = (strstr(msystem, "32") != NULL) ? "MINGW32" : "MINGW64";;
       n = __small_sprintf (name->sysname, "%s_%s-%u",
-			   sysname,
+			   msystem_sysname,
 			   wincap.osname (), wincap.build_number ());
       if (wincap.host_machine () != wincap.cygwin_machine ())
 	{
@@ -139,8 +124,15 @@ uname (struct utsname *in_name)
   __try
     {
       memset (name, 0, sizeof (*name));
-      const char* sysname = get_sysname();
-      __small_sprintf (name->sysname, "%s_%s", sysname, wincap.osname ());
+#ifdef __MSYS__
+      char* msystem = getenv("MSYSTEM");
+      const char* msystem_sysname = "MSYS";
+      if (msystem != NULL && *msystem && strcmp(msystem, "MSYS") != 0)
+        msystem_sysname = (strstr(msystem, "32") != NULL) ? "MINGW32" : "MINGW64";
+      __small_sprintf (name->sysname, "%s_%s", msystem_sysname, wincap.osname ());
+#else
+      __small_sprintf (name->sysname, "CYGWIN_%s", wincap.osname ());
+#endif
 
       /* Computer name */
       cygwin_gethostname (name->nodename, sizeof (name->nodename) - 1);
