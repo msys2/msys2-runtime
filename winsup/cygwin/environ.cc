@@ -201,11 +201,7 @@ parse_options (const char *inbuf)
       if (export_settings)
 	{
 	  debug_printf ("%s", newbuf + 1);
-#ifdef __MSYS__
-	  setenv ("MSYS", newbuf + 1, 1);
-#else
 	  setenv ("CYGWIN", newbuf + 1, 1);
-#endif
 	}
       return;
     }
@@ -678,7 +674,7 @@ _addenv (const char *name, const char *value, int overwrite)
   win_env *spenv;
   if ((spenv = getwinenv (envhere)))
     spenv->add_cache (value);
-  if (strcmp (name, "MSYS") == 0)
+  if (strcmp (name, "CYGWIN") == 0)
     parse_options (value);
 
   return 0;
@@ -781,9 +777,6 @@ static struct renv {
 } renv_arr[] = {
 	{ NL("COMMONPROGRAMFILES=") },		// 0
 	{ NL("COMSPEC=") },
-#ifdef __MSYS__
-	{ NL("MSYSTEM=") },			// 2
-#endif /* __MSYS__ */
 	{ NL("PATH=") },			// 2
 	{ NL("PROGRAMFILES=") },
 	{ NL("SYSTEMDRIVE=") },			// 4
@@ -795,21 +788,10 @@ static struct renv {
 #define RENV_SIZE (sizeof (renv_arr) / sizeof (renv_arr[0]))
 
 /* Set of first characters of the above list of variables. */
-static const char idx_arr[] =
-#ifdef __MSYS__
-	"CMPSTW";
-#else
-	"CPSTW";
-#endif
+static const char idx_arr[] = "CPSTW";
 /* Index into renv_arr at which the variables with this specific character
    starts. */
-static const int start_at[] = {
-#ifdef __MSYS__
-				0, 2, 3, 5, 7, 9
-#else
-				0, 2, 4, 6, 8
-#endif
-								};
+static const int start_at[] = { 0, 2, 4, 6, 8 };
 
 /* Turn environment variable part of a=b string into uppercase - for some
    environment variables only. */
@@ -877,11 +859,7 @@ environ_init (char **envp, int envc)
       dumper_init ();
       if (envp_passed_in)
 	{
-#ifdef __MSYS__
-	  p = getenv ("MSYS");
-#else
 	  p = getenv ("CYGWIN");
-#endif
 	  if (p)
 	    parse_options (p);
 	}
@@ -937,13 +915,8 @@ win32env_to_cygenv (PWCHAR rawenv, bool posify)
 		}
 	      sawTERM = 1;
 	    }
-#ifdef __MSYS__
-      else if (*newp == 'M' && strncmp (newp, "MSYS=", 5) == 0)
-        parse_options (newp + 5);
-#else
       else if (*newp == 'C' && strncmp (newp, "CYGWIN=", 7) == 0)
         parse_options (newp + 7);
-#endif
       if (*eq && posify)
         posify_maybe (envp + i, *++eq ? eq : --eq, tmpbuf);
       debug_printf ("%p: %s", envp[i], envp[i]);
@@ -1018,7 +991,6 @@ static NO_COPY spenv spenvs[] =
   {NL ("HOMEPATH="), false, false, &cygheap_user::env_homepath},
   {NL ("LOGONSERVER="), false, false, &cygheap_user::env_logsrv},
   {NL ("PATH="), false, true, NULL},
-  {NL ("MSYSTEM="), true, true, NULL},
   {NL ("SYSTEMDRIVE="), false, true, NULL},
   {NL ("SYSTEMROOT="), true, true, &cygheap_user::env_systemroot},
   {NL ("USERDOMAIN="), false, false, &cygheap_user::env_domain},
