@@ -127,7 +127,7 @@ dir=$(echo $dir | sed -e 's%/include/cygwin.*$%%' -e 's%include/cygwin.*$%.%')
 ) | while read var; do
     read val
 cat <<EOF
-  "%%% MSYS $var: $val\n"
+  "%%% Cygwin $var: $val\n"
 EOF
 done | tee /tmp/mkvers.$$ 1>&9
 
@@ -139,9 +139,9 @@ trap "rm -f /tmp/mkvers.$$" 0 1 2 15
 #
 cat <<EOF 1>&9
 #ifdef DEBUGGING
-  "%%% MSYS shared id: " CYGWIN_VERSION_DLL_IDENTIFIER "S" shared_data_version "-$builddate\n"
+  "%%% Cygwin shared id: " CYGWIN_VERSION_DLL_IDENTIFIER "S" shared_data_version "-$builddate\n"
 #else
-  "%%% MSYS shared id: " CYGWIN_VERSION_DLL_IDENTIFIER "S" shared_data_version "\n"
+  "%%% Cygwin shared id: " CYGWIN_VERSION_DLL_IDENTIFIER "S" shared_data_version "\n"
 #endif
   "END_CYGWIN_VERSION_INFO\n\0";
 cygwin_version_info cygwin_version =
