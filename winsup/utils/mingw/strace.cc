@@ -357,6 +357,7 @@ create_child (char **argv)
 
   SetConsoleCtrlHandler (NULL, 0);
 
+#if 0
   const char *cygwin_env = getenv ("CYGWIN");
   const char *space;
 
@@ -368,6 +369,8 @@ create_child (char **argv)
 				  + strlen (space) + strlen (cygwin_env));
   sprintf (newenv, "CYGWIN=noglob%s%s", space, cygwin_env);
   _putenv (newenv);
+#endif
+
   ret = CreateProcess (0, one_line.buf,	/* command line */
 		       NULL,	/* Security */
 		       NULL,	/* thread */
