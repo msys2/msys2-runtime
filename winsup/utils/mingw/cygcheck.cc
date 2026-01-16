@@ -108,6 +108,7 @@ static const char *known_env_vars[] = {
   "lpath",
   "make_mode",
   "makeflags",
+  "msys",
   "path",
   "pwd",
   "strace",

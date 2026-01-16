@@ -180,7 +180,7 @@ strbrk(char *&buf)
 /* Parse a string of the form "something=stuff somethingelse=more-stuff",
    silently ignoring unknown "somethings".  */
 static void
-parse_options (const char *inbuf)
+parse_options (const char *inbuf, bool is_msys2)
 {
   int istrue;
   parse_thing *k;
@@ -201,7 +201,10 @@ parse_options (const char *inbuf)
       if (export_settings)
 	{
 	  debug_printf ("%s", newbuf + 1);
-	  setenv ("CYGWIN", newbuf + 1, 1);
+          if (is_msys2)
+            setenv ("MSYS", newbuf + 1, 1);
+          else
+            setenv ("CYGWIN", newbuf + 1, 1);
 	}
       return;
     }
@@ -674,8 +677,10 @@ _addenv (const char *name, const char *value, int overwrite)
   win_env *spenv;
   if ((spenv = getwinenv (envhere)))
     spenv->add_cache (value);
+  if (strcmp (name, "MSYS") == 0)
+    parse_options (value, true);
   if (strcmp (name, "CYGWIN") == 0)
-    parse_options (value);
+    parse_options (value, false);
 
   return 0;
 }
@@ -873,9 +878,12 @@ environ_init (char **envp, int envc)
       dumper_init ();
       if (envp_passed_in)
 	{
+	  p = getenv ("MSYS");
+	  if (p)
+	    parse_options (p, true);
 	  p = getenv ("CYGWIN");
 	  if (p)
-	    parse_options (p);
+	    parse_options (p, false);
 	}
     }
   __except (NO_ERROR)
@@ -929,8 +937,10 @@ win32env_to_cygenv (PWCHAR rawenv, bool posify)
 		}
 	      sawTERM = 1;
 	    }
+      else if (*newp == 'M' && strncmp (newp, "MSYS=", 5) == 0)
+        parse_options (newp + 5, true);
       else if (*newp == 'C' && strncmp (newp, "CYGWIN=", 7) == 0)
-        parse_options (newp + 7);
+        parse_options (newp + 7, false);
       if (*eq && posify)
         posify_maybe (envp + i, *++eq ? eq : --eq, tmpbuf);
       debug_printf ("%p: %s", envp[i], envp[i]);
@@ -1193,8 +1203,12 @@ build_env (const char * const *envp, PWCHAR &envblock, int &envc,
 #ifdef __MSYS__
       if (ascii_strncasematch(*srcp, "MSYS=", 5))
         {
-          parse_options (*srcp + 5);
-	}
+          parse_options (*srcp + 5, true);
+        }
+      else if (ascii_strncasematch(*srcp, "CYGWIN=", 7))
+        {
+          parse_options (*srcp + 7, false);
+        }
       else if (!keep_posix)
         {
           /* Don't pass timezone environment to non-msys applications */

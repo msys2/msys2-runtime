@@ -540,6 +540,17 @@ int exec_prepared_command (PWCHAR command)
 	    }
 	  break;
 	}
+      if (wcsncmp (p, L"MSYS=", wcslen (L"MSYS=")) == 0)
+	{
+	  PWCHAR q = wcsstr (p, L"error_start") ;
+	  /* replace 'error_start=...' with '_rror_start=...' */
+	  if (q)
+	    {
+	      *q = L'_' ;
+	      SetEnvironmentVariableW (L"MSYS", p + wcslen (L"MSYS=")) ;
+	    }
+	  break;
+	}
     }
   FreeEnvironmentStringsW (rawenv);
 
