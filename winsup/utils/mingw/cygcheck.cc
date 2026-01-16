@@ -553,7 +553,7 @@ struct ImpDirectory
 
 static bool track_down (const char *file, const char *suffix, int lvl);
 
-#define CYGPREFIX (sizeof ("%%% Cygwin ") - 1)
+#define CYGPREFIX (sizeof ("%%% Msys ") - 1)
 static void
 cygwin_info (HANDLE h)
 {
@@ -585,7 +585,7 @@ cygwin_info (HANDLE h)
   while (buf < bufend)
     if ((buf = (char *) memchr (buf, '%', bufend - buf)) == NULL)
       break;
-    else if (strncmp ("%%% Cygwin ", buf, CYGPREFIX) != 0)
+    else if (strncmp ("%%% Msys ", buf, CYGPREFIX) != 0)
       buf++;
     else
       {
@@ -1026,7 +1026,7 @@ scan_registry (RegInfo * prev, HKEY hKey, char *name, int cygwin, bool wow64)
 
   char *cp;
   for (cp = name; *cp; cp++)
-    if (strncasecmp (cp, "Cygwin", 6) == 0)
+    if (strncasecmp (cp, "Msys", 4) == 0)
       cygwin = 1;
 
   DWORD num_subkeys, max_subkey_len, num_values;
@@ -1308,7 +1308,7 @@ handle_reg_installation (handle_reg_t what)
     printf ("Cygwin installations found in the registry:\n");
   for (int i = 0; i < 2; ++i)
     if (RegOpenKeyEx (i ? HKEY_CURRENT_USER : HKEY_LOCAL_MACHINE,
-		      "SOFTWARE\\Cygwin\\Installations", 0,
+		      "SOFTWARE\\Msys\\Installations", 0,
 		      what == DELETE_KEY ? KEY_READ | KEY_WRITE : KEY_READ,
 		      &key)
 	== ERROR_SUCCESS)
@@ -1784,7 +1784,7 @@ dump_sysinfo ()
   if (registry)
     {
       if (givehelp)
-	printf ("Scanning registry for keys with 'Cygwin' in them...\n");
+	printf ("Scanning registry for keys with 'Msys' in them...\n");
       scan_registry (0, HKEY_CURRENT_USER,
 		     (char *) "HKEY_CURRENT_USER", 0, false);
       scan_registry (0, HKEY_LOCAL_MACHINE,
