@@ -26,7 +26,11 @@ details. */
 #include "cygtls.h"
 #include "tls_pbuf.h"
 
+#ifdef __MSYS__
+#define CYGWIN_LOG_NAME L"MSYS"
+#else
 #define CYGWIN_LOG_NAME L"Cygwin"
+#endif
 
 static struct
 {

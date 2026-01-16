@@ -526,7 +526,11 @@ details. */
 
 /* Identifiers used in the Win32 registry. */
 
+#ifdef __MSYS__
+#define CYGWIN_INFO_CYGWIN_REGISTRY_NAME "MSYS"
+#else
 #define CYGWIN_INFO_CYGWIN_REGISTRY_NAME "Cygwin"
+#endif
 #define CYGWIN_INFO_INSTALLATIONS_NAME   "Installations"
 
 /* The default cygdrive prefix. */
