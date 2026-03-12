@@ -233,6 +233,8 @@ sigdelayed:
 	xorl	%ecx,%ecx
 	cpuid	# get necessary space for xsave
 	movq	%rbx,%rcx
+	addq	\$63, %rbx
+	andq	\$-64, %rbx # align to next 64-byte multiple
 	addq	\$0x48,%rbx # 0x18 for alignment, 0x30 for additional space
 	subq	%rbx,%rsp
 	movl	%ebx,0x24(%rsp)
