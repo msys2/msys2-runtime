@@ -364,6 +364,12 @@ skip_p2w:
     if (*it == ':')
         goto skip_p2w;
 
+    // Track '@' position for SCP/rsync remote path detection.
+    // Only set when the prefix looks like a valid username
+    // (alphanumeric, dots, dashes).
+#define ALNUMDD ".-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+    const char *at = NULL;
+
     while (it != end && *it) {
         switch (*it) {
         case '`':
@@ -389,11 +395,24 @@ skip_p2w:
                 if (it + 3 < end && it[2] == '.' && it[3] == '/')
                     goto skip_p2w;
             }
+
+            // Skip SCP/rsync remote paths: user@host:/path
+            // Verify: at was set, hostname between at+1 and colon
+            // is all valid hostname chars, and colon is followed
+            // by / then an alphanumeric character.
+            if (at && strspn(at + 1, ALNUMDD) == (size_t)(it - at - 1)
+                && it + 2 < end && it[1] == '/' && isalnum(it[2]))
+                goto skip_p2w;
             break;
         case '@':
             // Paths do not contain '@@'
             if (it + 1 < end && it[1] == '@')
                 goto skip_p2w;
+
+            // Record '@' only if the prefix is a valid username
+            if (!at && strspn(*src, ALNUMDD) == (size_t)(it - *src))
+                at = it;
+            break;
         }
         ++it;
     }
