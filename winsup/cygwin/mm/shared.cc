@@ -221,6 +221,7 @@ void
 user_info::create (bool reinit)
 {
   WCHAR name[UNLEN + 1] = L""; /* Large enough for SID */
+  bool created = false;
 
   if (reinit)
     {
@@ -236,11 +237,12 @@ user_info::create (bool reinit)
 
   user_shared = (user_info *) open_shared (name, USER_VERSION,
 					   cygwin_user_h, sizeof (user_info),
-					   SH_USER_SHARED, &sec_none);
-  debug_printf ("opening user shared for '%W' at %p", name, user_shared);
+					   SH_USER_SHARED, created, &sec_none);
+  debug_printf ("opening user shared for '%W' at %p, created %d",
+		name, user_shared, created);
   ProtectHandleINH (cygwin_user_h);
   debug_printf ("user shared version %x", user_shared->version);
-  if (reinit)
+  if (reinit || created)
     user_shared->initialize ();
   cygheap->shared_regions.user_shared_addr = user_shared;
 }
