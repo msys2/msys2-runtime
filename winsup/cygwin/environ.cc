@@ -201,11 +201,7 @@ parse_options (const char *inbuf)
       if (export_settings)
 	{
 	  debug_printf ("%s", newbuf + 1);
-#ifdef __MSYS__
-	  setenv ("MSYS", newbuf + 1, 1);
-#else
 	  setenv ("CYGWIN", newbuf + 1, 1);
-#endif
 	}
       return;
     }
@@ -678,7 +674,7 @@ _addenv (const char *name, const char *value, int overwrite)
   win_env *spenv;
   if ((spenv = getwinenv (envhere)))
     spenv->add_cache (value);
-  if (strcmp (name, "MSYS") == 0)
+  if (strcmp (name, "CYGWIN") == 0)
     parse_options (value);
 
   return 0;
@@ -877,11 +873,7 @@ environ_init (char **envp, int envc)
       dumper_init ();
       if (envp_passed_in)
 	{
-#ifdef __MSYS__
-	  p = getenv ("MSYS");
-#else
 	  p = getenv ("CYGWIN");
-#endif
 	  if (p)
 	    parse_options (p);
 	}
@@ -937,13 +929,8 @@ win32env_to_cygenv (PWCHAR rawenv, bool posify)
 		}
 	      sawTERM = 1;
 	    }
-#ifdef __MSYS__
-      else if (*newp == 'M' && strncmp (newp, "MSYS=", 5) == 0)
-        parse_options (newp + 5);
-#else
       else if (*newp == 'C' && strncmp (newp, "CYGWIN=", 7) == 0)
         parse_options (newp + 7);
-#endif
       if (*eq && posify)
         posify_maybe (envp + i, *++eq ? eq : --eq, tmpbuf);
       debug_printf ("%p: %s", envp[i], envp[i]);
