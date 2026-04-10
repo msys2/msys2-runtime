@@ -529,6 +529,17 @@ int exec_prepared_command (PWCHAR command)
   PWCHAR rawenv = GetEnvironmentStringsW () ;
   for (PWCHAR p = rawenv; *p != L'\0'; p = wcschr (p, L'\0') + 1)
     {
+      if (wcsncmp (p, L"CYGWIN=", wcslen (L"CYGWIN=")) == 0)
+	{
+	  PWCHAR q = wcsstr (p, L"error_start") ;
+	  /* replace 'error_start=...' with '_rror_start=...' */
+	  if (q)
+	    {
+	      *q = L'_' ;
+	      SetEnvironmentVariableW (L"CYGWIN", p + wcslen (L"CYGWIN=")) ;
+	    }
+	  break;
+	}
       if (wcsncmp (p, L"MSYS=", wcslen (L"MSYS=")) == 0)
 	{
 	  PWCHAR q = wcsstr (p, L"error_start") ;

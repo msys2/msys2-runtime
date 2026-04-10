@@ -378,13 +378,10 @@ hook_or_detect_cygwin (const char *name, const void *fn, WORD& subsys, HANDLE h)
   // Iterate through each import descriptor, and redirect if appropriate
   for (PIMAGE_IMPORT_DESCRIPTOR pd = pdfirst; pd->FirstThunk; pd++)
     {
-      if (!ascii_strcasematch (rva (PSTR, map ?: (char *) hm, pd->Name - delta),
-#ifdef __MSYS__
-			       "msys-2.0.dll"))
-#else
-			       "cygwin1.dll"))
-#endif
-	continue;
+      char *name_to_compare = rva (PSTR, map ?: (char *) hm, pd->Name - delta);
+      bool not_msys2 = !ascii_strcasematch (name_to_compare, "msys-2.0.dll");
+      bool not_cygwin = !ascii_strcasematch (name_to_compare, "cygwin1.dll");
+      if (not_msys2 && not_cygwin) continue;
       if (!fn)
 	{
 	  /* Just checking if executable used cygwin1.dll. */
