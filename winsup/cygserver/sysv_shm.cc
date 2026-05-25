@@ -342,7 +342,9 @@ kern_shmat(struct thread *td, int shmid, const void *shmaddr, int shmflg)
 	struct shm_handle *shm_handle;
 #endif
 	vm_offset_t attach_va;
+#ifndef __CYGWIN__
 	vm_prot_t prot;
+#endif
 	vm_size_t size;
 #ifndef __CYGWIN__
 	int rv;
@@ -379,13 +381,17 @@ kern_shmat(struct thread *td, int shmid, const void *shmaddr, int shmflg)
 		goto done2;
 	}
 	size = round_page(shmseg->shm_segsz);
+#ifndef __CYGWIN__
 #ifdef VM_PROT_READ_IS_EXEC
 	prot = VM_PROT_READ | VM_PROT_EXECUTE;
 #else
 	prot = VM_PROT_READ;
 #endif
+#endif
+#ifndef __CYGWIN__
 	if ((shmflg & SHM_RDONLY) == 0)
 		prot |= VM_PROT_WRITE;
+#endif
 	flags = MAP_ANON | MAP_SHARED;
 	debug_printf ("shmaddr: %x, shmflg: %x", shmaddr, shmflg);
 #ifdef __CYGWIN__
