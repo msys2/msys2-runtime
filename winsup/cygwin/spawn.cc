@@ -30,6 +30,8 @@ details. */
 #include "ntdll.h"
 #include "shared_info.h"
 
+char *pExecedHook;
+
 /* Add .exe to PROG if not already present and see if that exists.
    If not, return PROG (converted from posix to win32 rules if necessary).
    The result is always BUF.
@@ -277,6 +279,93 @@ child_info_spawn NO_COPY ch_spawn;
 extern "C" void __posix_spawn_sem_release (void *sem, int error);
 
 extern DWORD mutex_timeout; /* defined in fhandler_termios.cc */
+
+extern "C" {
+
+/* Stuff to support propagating signals to native Win32 apps:
+ * Try to find an MSVC runtime DLL attached to the target process.
+ * If found, look for the raise() entry point. Use that to forward
+ * signals that we receive. If we don't find it, cleanup and do
+ * no special signal handling for the target.
+ */
+static remote_info my_rmi = {
+  0, NULL, NULL, NULL,
+  "raise",
+  { "ucrtbase.dll", "msvcrt.dll" }
+};
+
+static DWORD
+remote_hook (remote_info1 *rmi)
+{
+  rmi->raise (rmi->sig);
+  return 0;
+}
+
+static DWORD
+remote_setup (remote_info *rmi)
+{
+  int i;
+  HMODULE hm;
+
+  for (i = 0; rmi->names[i][0]; i++)
+    {
+      hm = rmi->getModH (rmi->names[i]);
+      if (hm)
+	{
+	  rmi->raise = (raise_t *) rmi->getProc (hm, rmi->rname);
+	  if (rmi->raise)
+	    break;
+	}
+    }
+  return 0;
+}
+
+static void
+kill_hook (HANDLE hProc)
+{
+  SIZE_T funcSize = (char *) kill_hook - (char *) remote_setup;
+  SIZE_T fullSize = sizeof (remote_info) + funcSize;
+  SIZE_T nbytes;
+  HMODULE hkernel;
+  HANDLE hRemThread;
+  char *mHook = (char *) VirtualAllocEx (hProc, NULL, fullSize,
+    MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+  syscall_printf("Entering kill_hook, mHook = %p\n", mHook);
+  if (mHook)
+    {
+      hkernel = GetModuleHandle ("kernel32.dll");
+      my_rmi.getModH = (GetModH_t *)GetProcAddress(hkernel, "GetModuleHandleA");
+      my_rmi.getProc = (GetProc_t *)GetProcAddress(hkernel, "GetProcAddress");
+      syscall_printf("getModH %p, getProc %p\n", my_rmi.getModH, my_rmi.getProc);
+      WriteProcessMemory (hProc, mHook, &my_rmi, sizeof(my_rmi), &nbytes);
+      WriteProcessMemory (hProc, mHook+sizeof(my_rmi), (void *)remote_setup,
+        funcSize, &nbytes);
+      hRemThread = CreateRemoteThread (hProc, NULL, 0,
+        (LPTHREAD_START_ROUTINE) (mHook+sizeof(my_rmi)), mHook, 0, NULL);
+      if (hRemThread)
+        {
+          WaitForSingleObject(hRemThread,INFINITE);
+          CloseHandle(hRemThread);
+          ReadProcessMemory(hProc,mHook+sizeof(int),&my_rmi.raise,
+            sizeof(my_rmi.raise), &nbytes);
+          if (my_rmi.raise)
+            {
+	      syscall_printf("myraise %p\n", my_rmi.raise);
+              funcSize = (char *) remote_setup - (char *) remote_hook;
+              WriteProcessMemory (hProc, mHook+sizeof(remote_info1),
+                (void *)remote_hook, funcSize, &nbytes);
+            }
+          else
+            {
+              VirtualFreeEx( hProc, mHook, 0, MEM_RELEASE);
+              mHook = NULL;
+            }
+        }
+      pExecedHook = mHook;
+    }
+}
+}
+
 
 int
 child_info_spawn::worker (const char *prog_arg, const char *const *argv,
@@ -793,6 +882,8 @@ child_info_spawn::worker (const char *prog_arg, const char *const *argv,
 	     process. For Cygwin processes we also have to create a reference
 	     in the child. */
 	  myself.create_winpid_symlink ();
+	  if (!iscygwin())
+	    kill_hook(hExeced);
 	  if (real_path.iscygexec ())
 	    DuplicateHandle (GetCurrentProcess (),
 			     myself.shared_winpid_handle (),

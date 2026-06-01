@@ -181,3 +181,24 @@ public:
 };
 
 #define myself_nowait ((_pinfo *) myself_nowait_dummy)
+
+extern "C" {
+typedef HMODULE (GetModH_t)(LPCTSTR name);
+typedef FARPROC (GetProc_t)(HMODULE hmod, LPCSTR name);
+typedef int (raise_t)(int sig);
+
+typedef struct remote_info1 {
+  int sig;
+  raise_t *raise;
+} remote_info1;
+
+typedef struct remote_info {
+  int sig;
+  raise_t *raise;
+  GetModH_t *getModH;
+  GetProc_t *getProc;
+  char rname[16];
+  char names[12][16];
+} remote_info;
+
+}
