@@ -1524,6 +1524,7 @@ sigpacket::process ()
   bool issig_wait = false;
   struct sigaction& thissig = global_sigs[si.si_signo];
   void *handler = have_execed ? NULL : (void *) thissig.sa_handler;
+  extern char *pExecedHook;
 
   threadlist_t *tl_entry = NULL;
   _cygtls *tls = NULL;
@@ -1627,6 +1628,54 @@ sigpacket::process ()
     goto exit_sig;
   if (si.si_signo == SIGSTOP)
     goto stop;
+
+/* This is the value the MSVC RT uses for SIGBREAK. MSVC doesn't define
+ * SIGQUIT so we turn it into SIGBREAK, as that seems to be the intent
+ * of the signal. MSVC also sends SIGBREAK to NT Services in response
+ * to CTRL_LOGOFF_EVENTs, which we would consider SIGHUP. Since MSVC
+ * doesn't handle SIGHUP we translate SIGHUP to SIGBREAK as well.
+ */
+#ifndef SIGBREAK
+#define SIGBREAK 21
+#endif
+  /* both of these may be used for SIGABRT */
+#define SIGABRT_22	22
+#define SIGABRT_6	6
+
+  if (pExecedHook)
+    {
+      HANDLE hRemThread;
+      SIZE_T nbytes;
+      int rsig = si.si_signo;
+      switch(rsig)
+	{
+	  case SIGQUIT:
+	  case SIGHUP:
+	    rsig = SIGBREAK;
+	    fallthrough;
+	  case SIGINT:
+	  case SIGTERM:
+	  case SIGBREAK:
+	  case SIGABRT_22:
+	  case SIGABRT_6:
+	  case SIGFPE:
+	  case SIGILL:
+	  case SIGSEGV:
+	    WriteProcessMemory(ch_spawn,pExecedHook,&rsig,sizeof(rsig),&nbytes);
+	    hRemThread = CreateRemoteThread(ch_spawn,NULL,0,
+		      (LPTHREAD_START_ROUTINE)(pExecedHook+sizeof(remote_info1)),
+		      pExecedHook, 0, NULL);
+	    if (hRemThread)
+	      {
+	        WaitForSingleObject(hRemThread,INFINITE);
+		CloseHandle(hRemThread);
+		goto done;
+	      }
+	    fallthrough;
+	  default:
+	    break;
+	}
+    }
 
   if (handler == (void *) SIG_DFL)
     {
