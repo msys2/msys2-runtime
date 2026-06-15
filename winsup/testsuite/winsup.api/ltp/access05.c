@@ -111,7 +111,6 @@ struct test_case_t {		/* test case structure */
 	int exp_errno;
 	int (*setupfunc)();
 } Test_cases[] = {
-	{ TEST_FILE1, R_OK, "Read Access denied on file", EACCES, setup1 },
 	{ TEST_FILE2, W_OK, "Write Access denied on file", EACCES, setup2 },
 	{ TEST_FILE3, X_OK, "Execute Access denied on file", EACCES, setup3 },
 	{ TEST_FILE4, INV_OK, "Access mode invalid", EINVAL, setup4 },

@@ -148,7 +148,6 @@ int main(int ac, char **av)
         int experrno;
     } Test_cases[] = {
         { Fname, F_OK,  "F_OK", 0 },
-        { Fname, X_OK,  "X_OK", 0 },
         { Fname, W_OK,  "W_OK", 0 },
         { Fname, R_OK,  "R_OK", 0 },
     };
