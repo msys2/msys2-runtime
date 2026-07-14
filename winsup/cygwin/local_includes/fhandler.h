@@ -2023,6 +2023,7 @@ class fhandler_termios: public fhandler_base
     HANDLE output_handle;
     HANDLE input_mutex;
     HANDLE output_mutex;
+    HANDLE cons_mode_mutex;
     _minor_t unit;
   };
   class spawn_worker
@@ -2042,7 +2043,8 @@ class fhandler_termios: public fhandler_base
 		bool nopcon, bool reset_sendsig, const WCHAR *envblock);
     bool need_cleanup () { return ptys_need_cleanup || cons_need_cleanup; }
     void cleanup ();
-    void close_handle_set ();
+    bool is_attaching (DWORD pid);
+    void wait_for_resume_if_necessary (path_conv &, PROCESS_INFORMATION &);
   };
 };
 
@@ -2157,6 +2159,8 @@ class dev_console
   volatile bool master_thread_suspended;
   int num_processed; /* Number of input events in the current input buffer
 			already processed by cons_master_thread(). */
+  bool need_win32_input_mode_fix;
+  bool is_processed_input;
 
   inline UINT get_console_cp ();
   DWORD con_to_str (char *d, int dlen, WCHAR w);
@@ -2199,6 +2203,7 @@ private:
   static console_state *shared_console_info[MAX_CONS_DEV + 1];
   static bool invisible_console;
   HANDLE input_mutex, output_mutex;
+  HANDLE cons_mode_mutex;
   handle_set_t handle_set;
   _minor_t unit;
   size_t num_input_events_processed;
@@ -2268,6 +2273,7 @@ private:
 
   void read (void *ptr, size_t& len);
   ssize_t write (const void *ptr, size_t len);
+  ssize_t raw_write (const void *ptr, size_t len);
   void doecho (const void *str, DWORD len);
   int close (int flag = -1);
   static bool exists ()
@@ -2366,6 +2372,7 @@ private:
   void wpbuf_send ();
   int fstat (struct stat *buf);
   void discard_key_events (size_t n);
+  void fix_input_mode_if_necessary ();
 
   class console_unit
   {
@@ -2379,6 +2386,7 @@ private:
   void setup_pcon_hand_over ();
   static void pcon_hand_over_proc ();
   static tty::cons_mode cons_mode_on_close (handle_set_t *);
+  static int active_non_cygwin_apps_exist (pid_t pgid);
 
   friend tty_min * tty_list::get_cttyp ();
 };
