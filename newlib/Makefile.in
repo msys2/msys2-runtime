@@ -3084,51 +3084,51 @@ am__objects_152 = libm/common/libm_a-atanl.$(OBJEXT) \
 	libm/common/libm_a-sl_finite.$(OBJEXT)
 @HAVE_LONG_DOUBLE_TRUE@am__objects_153 = $(am__objects_152)
 @HAVE_FPMATH_H_TRUE@am__objects_154 =  \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-e_acoshl.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-e_acosl.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-e_asinl.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-e_atan2l.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-e_atanhl.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-e_coshl.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-e_fmodl.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-e_lgammal.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-e_remainderl.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-e_sinhl.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-s_asinhl.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-s_atanl.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-s_cbrtl.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-s_ceill.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-s_copysignl.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-s_cosl.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-s_fabsl.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-fdiml.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-s_floorl.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-s_fmal.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-s_fmaxl.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-s_fminl.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-s_frexpl.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-s_ilogbl.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-s_llrintl.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-s_llroundl.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-s_logbl.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-s_lrint.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-s_lrintl.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-s_lround.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-s_lroundl.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-s_modfl.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-s_nearbyintl.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-s_nextafterl.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-s_nexttoward.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-s_nexttowardf.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-s_remquol.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-s_rintl.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-s_roundl.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-scalblnl.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-s_scalbnl.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-s_sinl.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-s_tanhl.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-s_tanl.$(OBJEXT) \
-@HAVE_FPMATH_H_TRUE@	libm/ld/libm_a-s_truncl.$(OBJEXT)
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-e_acoshl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-e_acosl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-e_asinl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-e_atan2l.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-e_atanhl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-e_coshl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-e_fmodl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-e_lgammal.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-e_remainderl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-e_sinhl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-s_asinhl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-s_atanl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-s_cbrtl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-s_ceill.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-s_copysignl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-s_cosl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-s_fabsl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-fdiml.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-s_floorl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-s_fmal.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-s_fmaxl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-s_fminl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-s_frexpl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-s_ilogbl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-s_llrintl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-s_llroundl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-s_logbl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-s_lrint.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-s_lrintl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-s_lround.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-s_lroundl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-s_modfl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-s_nearbyintl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-s_nextafterl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-s_nexttoward.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-s_nexttowardf.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-s_remquol.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-s_rintl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-s_roundl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-scalblnl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-s_scalbnl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-s_sinl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-s_tanhl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-s_tanl.$(OBJEXT) \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/libm_a-s_truncl.$(OBJEXT)
 @HAVE_FPMATH_H_TRUE@@HAVE_LONG_DOUBLE_TRUE@am__objects_155 =  \
 @HAVE_FPMATH_H_TRUE@@HAVE_LONG_DOUBLE_TRUE@	$(am__objects_154)
 am__objects_156 = libm/complex/libm_a-cabs.$(OBJEXT) \
@@ -3270,19 +3270,19 @@ am__objects_159 = libm/fenv/libm_a-feclearexcept.$(OBJEXT) \
 @HAVE_LIBM_MACHINE_AARCH64_FALSE@@HAVE_LIBM_MACHINE_RISCV_TRUE@	libm/ld128/libm_a-k_tanl.$(OBJEXT) \
 @HAVE_LIBM_MACHINE_AARCH64_FALSE@@HAVE_LIBM_MACHINE_RISCV_TRUE@	libm/ld128/libm_a-s_sinpil.$(OBJEXT) \
 @HAVE_LIBM_MACHINE_AARCH64_FALSE@@HAVE_LIBM_MACHINE_RISCV_TRUE@	libm/ld128/libm_a-s_cospil.$(OBJEXT)
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@am__objects_162 = libm/ld128/libm_a-e_powl.$(OBJEXT) \
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/libm_a-s_erfl.$(OBJEXT) \
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/libm_a-s_exp2l.$(OBJEXT) \
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/libm_a-s_expl.$(OBJEXT) \
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/libm_a-s_logl.$(OBJEXT) \
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/libm_a-b_tgammal.$(OBJEXT) \
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/libm_a-invtrig.$(OBJEXT) \
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/libm_a-e_lgammal_r.$(OBJEXT) \
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/libm_a-k_cosl.$(OBJEXT) \
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/libm_a-k_sinl.$(OBJEXT) \
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/libm_a-k_tanl.$(OBJEXT) \
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/libm_a-s_sinpil.$(OBJEXT) \
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/libm_a-s_cospil.$(OBJEXT)
+@HAVE_LIBM_MACHINE_AARCH64_TRUE@@LDBL_EQ_DBL_FALSE@am__objects_162 = libm/ld128/libm_a-e_powl.$(OBJEXT) \
+@HAVE_LIBM_MACHINE_AARCH64_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld128/libm_a-s_erfl.$(OBJEXT) \
+@HAVE_LIBM_MACHINE_AARCH64_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld128/libm_a-s_exp2l.$(OBJEXT) \
+@HAVE_LIBM_MACHINE_AARCH64_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld128/libm_a-s_expl.$(OBJEXT) \
+@HAVE_LIBM_MACHINE_AARCH64_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld128/libm_a-s_logl.$(OBJEXT) \
+@HAVE_LIBM_MACHINE_AARCH64_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld128/libm_a-b_tgammal.$(OBJEXT) \
+@HAVE_LIBM_MACHINE_AARCH64_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld128/libm_a-invtrig.$(OBJEXT) \
+@HAVE_LIBM_MACHINE_AARCH64_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld128/libm_a-e_lgammal_r.$(OBJEXT) \
+@HAVE_LIBM_MACHINE_AARCH64_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld128/libm_a-k_cosl.$(OBJEXT) \
+@HAVE_LIBM_MACHINE_AARCH64_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld128/libm_a-k_sinl.$(OBJEXT) \
+@HAVE_LIBM_MACHINE_AARCH64_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld128/libm_a-k_tanl.$(OBJEXT) \
+@HAVE_LIBM_MACHINE_AARCH64_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld128/libm_a-s_sinpil.$(OBJEXT) \
+@HAVE_LIBM_MACHINE_AARCH64_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld128/libm_a-s_cospil.$(OBJEXT)
 @HAVE_LIBM_MACHINE_AARCH64_TRUE@@HAVE_LONG_DOUBLE_TRUE@am__objects_163 = $(am__objects_162)
 @HAVE_LIBM_MACHINE_AMDGCN_TRUE@am__objects_164 = libm/machine/amdgcn/libm_a-v64_mathcnst.$(OBJEXT) \
 @HAVE_LIBM_MACHINE_AMDGCN_TRUE@	libm/machine/amdgcn/libm_a-v64_reent.$(OBJEXT) \
@@ -4895,51 +4895,51 @@ libm_common_lsrc = \
 
 libm_a_CFLAGS_libm_common = -fbuiltin -fno-math-errno
 @HAVE_FPMATH_H_TRUE@libm_ld_lsrc = \
-@HAVE_FPMATH_H_TRUE@	libm/ld/e_acoshl.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/e_acosl.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/e_asinl.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/e_atan2l.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/e_atanhl.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/e_coshl.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/e_fmodl.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/e_lgammal.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/e_remainderl.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/e_sinhl.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/s_asinhl.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/s_atanl.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/s_cbrtl.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/s_ceill.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/s_copysignl.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/s_cosl.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/s_fabsl.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/fdiml.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/s_floorl.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/s_fmal.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/s_fmaxl.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/s_fminl.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/s_frexpl.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/s_ilogbl.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/s_llrintl.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/s_llroundl.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/s_logbl.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/s_lrint.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/s_lrintl.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/s_lround.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/s_lroundl.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/s_modfl.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/s_nearbyintl.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/s_nextafterl.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/s_nexttoward.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/s_nexttowardf.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/s_remquol.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/s_rintl.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/s_roundl.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/scalblnl.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/s_scalbnl.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/s_sinl.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/s_tanhl.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/s_tanl.c \
-@HAVE_FPMATH_H_TRUE@	libm/ld/s_truncl.c
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/e_acoshl.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/e_acosl.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/e_asinl.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/e_atan2l.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/e_atanhl.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/e_coshl.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/e_fmodl.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/e_lgammal.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/e_remainderl.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/e_sinhl.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/s_asinhl.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/s_atanl.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/s_cbrtl.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/s_ceill.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/s_copysignl.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/s_cosl.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/s_fabsl.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/fdiml.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/s_floorl.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/s_fmal.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/s_fmaxl.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/s_fminl.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/s_frexpl.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/s_ilogbl.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/s_llrintl.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/s_llroundl.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/s_logbl.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/s_lrint.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/s_lrintl.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/s_lround.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/s_lroundl.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/s_modfl.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/s_nearbyintl.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/s_nextafterl.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/s_nexttoward.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/s_nexttowardf.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/s_remquol.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/s_rintl.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/s_roundl.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/scalblnl.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/s_scalbnl.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/s_sinl.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/s_tanhl.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/s_tanl.c \
+@HAVE_FPMATH_H_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld/s_truncl.c
 
 @HAVE_FPMATH_H_TRUE@libm_a_CFLAGS_libm_ld = -fbuiltin -fno-math-errno
 libm_complex_src = \
@@ -5094,10 +5094,10 @@ libm_test_test_LDADD = $(CRT0) libm.a libc.a
 @HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/machine/aarch64/feupdateenv.c
 
 @HAVE_LIBM_MACHINE_AARCH64_TRUE@libm_ld128_lsrc = \
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/e_powl.c libm/ld128/s_erfl.c libm/ld128/s_exp2l.c libm/ld128/s_expl.c \
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/s_logl.c libm/ld128/b_tgammal.c libm/ld128/invtrig.c \
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/e_lgammal_r.c libm/ld128/k_cosl.c libm/ld128/k_sinl.c \
-@HAVE_LIBM_MACHINE_AARCH64_TRUE@	libm/ld128/k_tanl.c libm/ld128/s_sinpil.c libm/ld128/s_cospil.c
+@HAVE_LIBM_MACHINE_AARCH64_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld128/e_powl.c libm/ld128/s_erfl.c libm/ld128/s_exp2l.c libm/ld128/s_expl.c \
+@HAVE_LIBM_MACHINE_AARCH64_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld128/s_logl.c libm/ld128/b_tgammal.c libm/ld128/invtrig.c \
+@HAVE_LIBM_MACHINE_AARCH64_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld128/e_lgammal_r.c libm/ld128/k_cosl.c libm/ld128/k_sinl.c \
+@HAVE_LIBM_MACHINE_AARCH64_TRUE@@LDBL_EQ_DBL_FALSE@	libm/ld128/k_tanl.c libm/ld128/s_sinpil.c libm/ld128/s_cospil.c
 
 @HAVE_LIBM_MACHINE_RISCV_TRUE@libm_ld128_lsrc = \
 @HAVE_LIBM_MACHINE_RISCV_TRUE@	libm/ld128/e_powl.c libm/ld128/s_erfl.c libm/ld128/s_exp2l.c libm/ld128/s_expl.c \
