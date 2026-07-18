@@ -645,9 +645,6 @@ get_by_id_table (by_id_entry * &table, fhandler_dev_disk::dev_disk_location loc)
 
 const char dev_disk[] = "/dev/disk";
 const size_t dev_disk_len = sizeof (dev_disk) - 1;
-static const char by_drive[] = "/by-drive";
-const size_t by_drive_len = sizeof(by_drive) - 1;
-
 /* Keep this in sync with enum fhandler_dev_disk::dev_disk_location starting
    at disk_by_drive. */
 static const char * const by_dir_names[] {

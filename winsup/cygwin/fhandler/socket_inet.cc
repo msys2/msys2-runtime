@@ -70,9 +70,13 @@
       ReleaseMutex (wsock_mtx); \
     }
 
+#ifdef __aarch64__
+static wsa_event wsa_events[NUM_SOCKS] __attribute__((section (".cygwin_dll_common")));
+static LONG socket_serial_number __attribute__((section (".cygwin_dll_common")));
+#else
 static wsa_event wsa_events[NUM_SOCKS] __attribute__((section (".cygwin_dll_common"), shared));
-
 static LONG socket_serial_number __attribute__((section (".cygwin_dll_common"), shared));
+#endif
 
 static HANDLE wsa_slot_mtx;
 

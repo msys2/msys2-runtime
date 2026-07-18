@@ -5,6 +5,13 @@ SEARCH_DIR("/usr/x86_64-pc-msys/lib/w32api"); SEARCH_DIR("=/usr/lib/w32api");
 # else
 SEARCH_DIR("/usr/x86_64-pc-cygwin/lib/w32api"); SEARCH_DIR("=/usr/lib/w32api");
 # endif
+#elif defined(__aarch64__)
+OUTPUT_FORMAT(pei-aarch64-little)
+# ifdef __MSYS__
+SEARCH_DIR("/usr/aarch64-pc-msys/lib/w32api"); SEARCH_DIR("=/usr/lib/w32api");
+# else
+SEARCH_DIR("/usr/aarch64-pc-cygwin/lib/w32api"); SEARCH_DIR("=/usr/lib/w32api");
+# endif
 #else
 #error unimplemented for this target
 #endif
@@ -27,6 +34,14 @@ SECTIONS
 			LONG (-1); LONG (-1); *(SORT(.ctors.*)); *(.ctors); *(.ctor); LONG (0); LONG (0);
      ___DTOR_LIST__ = .; __DTOR_LIST__ = .;
 			LONG (-1); LONG (-1); *(SORT(.dtors.*)); *(.dtors); *(.dtor);  LONG (0); LONG (0);
+#elif defined(__aarch64__)
+    /* The runtime iterates constructor and destructor lists as function
+       pointers.  Use complete 64-bit sentinels on the 64-bit ARM target. */
+    . = ALIGN(8);
+     ___CTOR_LIST__ = .; __CTOR_LIST__ = .;
+			LONG (0); LONG (0); *(SORT(.ctors.*)); *(.ctors); *(.ctor); LONG (0); LONG (0);
+     ___DTOR_LIST__ = .; __DTOR_LIST__ = .;
+			LONG (0); LONG (0); *(SORT(.dtors.*)); *(.dtors); *(.dtor); LONG (0); LONG (0);
 #else
      ___CTOR_LIST__ = .; __CTOR_LIST__ = .;
 			LONG (-1); *(SORT(.ctors.*)); *(.ctors); *(.ctor); LONG (0);
@@ -141,6 +156,8 @@ SECTIONS
   .debug_pubtypes ALIGN(__section_alignment__) (NOLOAD) : { *(.debug_pubtypes) }
   /* DWARF 2 */
   .debug_info     ALIGN(__section_alignment__) (NOLOAD) : { *(.debug_info) }
+  .debug_addr     ALIGN(__section_alignment__) (NOLOAD) : { *(.debug_addr) }
+  .debug_str_offsets ALIGN(__section_alignment__) (NOLOAD) : { *(.debug_str_offsets) }
   .debug_abbrev   ALIGN(__section_alignment__) (NOLOAD) : { *(.debug_abbrev) }
   .debug_line     ALIGN(__section_alignment__) (NOLOAD) : { *(.debug_line) }
   .debug_frame    ALIGN(__section_alignment__) (NOLOAD) : { *(.debug_frame) }

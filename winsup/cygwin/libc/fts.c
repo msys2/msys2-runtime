@@ -123,10 +123,8 @@ static const char *ufslike_filesystems[] = {
 #endif
 
 FTS *
-fts_open(argv, options, compar)
-	char * const *argv;
-	int options;
-	int (*compar)(const FTSENT * const *, const FTSENT * const *);
+fts_open(char * const *argv, int options,
+	 int (*compar)(const FTSENT * const *, const FTSENT * const *))
 {
 	struct _fts_private *priv;
 	FTS *sp;

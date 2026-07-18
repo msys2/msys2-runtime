@@ -25,6 +25,7 @@ details.  */
 #define MANGLED_ZNWX_NOTHROW_T		"__wrap__ZnwmRKSt9nothrow_t"
 #define MANGLED_ZNAX_NOTHROW_T		"__wrap__ZnamRKSt9nothrow_t"
 
+#ifndef __aarch64__
 extern void *operator new(std::size_t sz) noexcept (false)
 			__asm__ (MANGLED_ZNWX);
 extern void *operator new[](std::size_t sz) noexcept (false)
@@ -89,4 +90,28 @@ operator delete[](void *p, const std::nothrow_t &nt) noexcept (true)
 {
   (*user_data->cxx_malloc->oper_delete___nt) (p, nt);
 }
-
+#else
+/* Clang has already seen libc++'s operator declarations, so it correctly
+   rejects changing their assembler names.  Define the GNU ld --wrap entry
+   points directly instead. */
+extern "C" void *__wrap__Znwm (std::size_t sz)
+{ return (*user_data->cxx_malloc->oper_new) (sz); }
+extern "C" void *__wrap__Znam (std::size_t sz)
+{ return (*user_data->cxx_malloc->oper_new__) (sz); }
+extern "C" void __wrap__ZdlPv (void *p)
+{ (*user_data->cxx_malloc->oper_delete) (p); }
+extern "C" void __wrap__ZdaPv (void *p)
+{ (*user_data->cxx_malloc->oper_delete__) (p); }
+extern "C" void *__wrap__ZnwmRKSt9nothrow_t (std::size_t sz,
+					      const std::nothrow_t &nt)
+{ return (*user_data->cxx_malloc->oper_new_nt) (sz, nt); }
+extern "C" void *__wrap__ZnamRKSt9nothrow_t (std::size_t sz,
+					      const std::nothrow_t &nt)
+{ return (*user_data->cxx_malloc->oper_new___nt) (sz, nt); }
+extern "C" void __wrap__ZdlPvRKSt9nothrow_t (void *p,
+					      const std::nothrow_t &nt)
+{ (*user_data->cxx_malloc->oper_delete_nt) (p, nt); }
+extern "C" void __wrap__ZdaPvRKSt9nothrow_t (void *p,
+					      const std::nothrow_t &nt)
+{ (*user_data->cxx_malloc->oper_delete___nt) (p, nt); }
+#endif

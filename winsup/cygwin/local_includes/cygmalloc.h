@@ -6,6 +6,8 @@ This software is a copyrighted work licensed under the terms of the
 Cygwin license.  Please consult the file "CYGWIN_LICENSE" for
 details. */
 
+#include <errno.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -21,13 +23,18 @@ int dlmalloc_trim (size_t);
 int dlmallopt (int p, int v);
 void dlmalloc_stats ();
 
+#ifndef MALLOC_ALIGNMENT
 #define MALLOC_ALIGNMENT ((size_t)16U)
+#endif
 
 #if defined (DLMALLOC_VERSION)	/* Building malloc.cc */
 
 extern "C" void __set_ENOMEM ();
+# undef MALLOC_FAILURE_ACTION
 # define MALLOC_FAILURE_ACTION	__set_ENOMEM ()
 # define USE_DL_PREFIX 1
+# define USE_SPIN_LOCKS 1
+# define USE_LOCKS 1
 
 #elif defined (__INSIDE_CYGWIN__)
 

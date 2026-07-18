@@ -46,7 +46,9 @@ endif
 include %D%/common/Makefile.inc
 
 if HAVE_FPMATH_H
+if !LDBL_EQ_DBL
 include %D%/ld/Makefile.inc
+endif
 endif # HAVE_FPMATH_H
 
 include %D%/complex/Makefile.inc
@@ -55,7 +57,9 @@ include %D%/test/Makefile.inc
 
 if HAVE_LIBM_MACHINE_AARCH64
 include %D%/machine/aarch64/Makefile.inc
+if !LDBL_EQ_DBL
 include %D%/ld128/Makefile.inc
+endif
 endif
 if HAVE_LIBM_MACHINE_AMDGCN
 include %D%/machine/amdgcn/Makefile.inc

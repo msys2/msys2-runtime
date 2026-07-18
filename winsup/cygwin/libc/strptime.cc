@@ -166,7 +166,7 @@ get_era_info (const char *era, locale_t locale)
 	  era = c + 1;
 	}
       /* era_C */
-      c = strchr (era, ':');
+      c = const_cast<char *> (strchr (era, ':'));
       len = c - era;
       ei[cur].era_C = (CHAR *) malloc ((len + 1) * sizeof (CHAR));
       if (!ei[cur].era_C)
@@ -180,9 +180,9 @@ get_era_info (const char *era, locale_t locale)
       ei[cur].era_C[len] = '\0';
       /* era_Y */
       ++era;
-      c = strchr (era, ';');
+      c = const_cast<char *> (strchr (era, ';'));
       if (!c)
-	c = strchr (era, '\0');
+	c = const_cast<char *> (strchr (era, '\0'));
       len = c - era;
       ei[cur].era_Y = (CHAR *) malloc ((len + 1) * sizeof (CHAR));
       if (!ei[cur].era_Y)

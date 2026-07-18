@@ -3166,9 +3166,9 @@ suffix_scan::has (const char *in_path, const suffix_info *in_suffixes)
 
   const char *fname = strrchr (in_path, '\\');
   fname = fname ? fname + 1 : in_path;
-  char *ext_here = strrchr (fname, '.');
+  char *ext_here = const_cast<char *> (strrchr (fname, '.'));
   path = in_path;
-  eopath = strchr (path, '\0');
+  eopath = const_cast<char *> (strchr (path, '\0'));
 
   if (!ext_here)
     goto noext;

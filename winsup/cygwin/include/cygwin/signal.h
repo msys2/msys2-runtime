@@ -98,13 +98,44 @@ struct __attribute__ ((__aligned__ (16))) __mcontext
   __uint64_t cr2;
 };
 
+#elif defined (__aarch64__)
+
+struct _uc_neon128
+{
+  __uint64_t low;
+  __int64_t high;
+};
+
+/* Match Windows ARM64_NT_CONTEXT, followed by the two Cygwin fields. */
+struct __attribute__ ((__aligned__ (16))) __mcontext
+{
+  __uint32_t ctxflags;
+  __uint32_t cpsr;
+  __uint64_t x[31];
+  __uint64_t sp;
+  __uint64_t pc;
+  struct _uc_neon128 v[32];
+  __uint32_t fpcr;
+  __uint32_t fpsr;
+  __uint32_t bcr[8];
+  __uint64_t bvr[8];
+  __uint32_t wcr[2];
+  __uint64_t wvr[2];
+  __uint64_t oldmask;
+  __uint64_t cr2;
+};
+
 #else
 #error unimplemented for this target
 #endif
 
 /* Needed for GDB.  It only compiles in the context copy code if this macro is
    defined.  This is not sizeof(CONTEXT) due to historical accidents. */
-#define __COPY_CONTEXT_SIZE 816
+#ifdef __aarch64__
+# define __COPY_CONTEXT_SIZE 912
+#else
+# define __COPY_CONTEXT_SIZE 816
+#endif
 
 typedef union sigval
 {

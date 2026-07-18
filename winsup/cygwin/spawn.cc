@@ -338,7 +338,6 @@ child_info_spawn::worker (const char *prog_arg, const char *const *argv,
   int c_flags;
 
   STARTUPINFOW si = {};
-  int looped = 0;
 
   fhandler_termios::spawn_worker term_spawn_worker;
 
@@ -890,7 +889,6 @@ child_info_spawn::worker (const char *prog_arg, const char *const *argv,
 	    {
 	      if (!proc_retry (pi.hProcess))
 		{
-		  looped++;
 		  goto loop;
 		}
 	      close_all_files (true);

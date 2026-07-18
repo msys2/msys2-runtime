@@ -1178,7 +1178,7 @@ case "${target}" in
   i[[3456789]]86-*-mingw*)
     target_configdirs="$target_configdirs target-winsup"
     ;;
-  *-*-cygwin*)
+  *-*-cygwin* | *-*-msys*)
     target_configdirs="$target_configdirs target-libtermcap target-winsup"
     noconfigdirs="$noconfigdirs target-libgloss"
     # always build newlib if winsup directory is present.

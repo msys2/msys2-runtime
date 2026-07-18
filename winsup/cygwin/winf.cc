@@ -68,7 +68,7 @@ linebuf::fromargv (av& newargv, const char *real_path, bool cmdlenoverflow_ok)
   bool success = true;
   for (int i = 0; i < newargv.argc; i++)
     {
-      char *p = NULL;
+      const char *p = NULL;
       const char *a;
 
       a = i ? newargv[i] : (char *) real_path;

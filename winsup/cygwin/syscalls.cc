@@ -5169,7 +5169,7 @@ pipe2 (int filedes[2], int mode)
 extern "C" FILE *
 tmpfile (void)
 {
-  char *dir = getenv ("TMPDIR");
+  const char *dir = getenv ("TMPDIR");
   if (!dir)
     dir = P_tmpdir;
   int fd = open (dir, O_RDWR | O_BINARY | O_TMPFILE, S_IRUSR | S_IWUSR);

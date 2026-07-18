@@ -638,6 +638,8 @@ HAS_NDS32_FPU_SP_TRUE
 MACH_ADD_SETJMP_FALSE
 MACH_ADD_SETJMP_TRUE
 HAVE_FPMATH_H_FALSE
+LDBL_EQ_DBL_FALSE
+LDBL_EQ_DBL_TRUE
 HAVE_FPMATH_H_TRUE
 HAVE_LIBC_MACHINE_Z8K_FALSE
 HAVE_LIBC_MACHINE_Z8K_TRUE
@@ -7482,6 +7484,14 @@ $as_echo "#define _LDBL_EQ_DBL 1" >>confdefs.h
 
 fi
 
+ if test x"$newlib_cv_ldbl_eq_dbl" = x"yes"; then
+  LDBL_EQ_DBL_TRUE=
+  LDBL_EQ_DBL_FALSE='#'
+else
+  LDBL_EQ_DBL_TRUE='#'
+  LDBL_EQ_DBL_FALSE=
+fi
+
 ac_config_files="$ac_config_files Makefile"
 
 cat >confcache <<\_ACEOF
@@ -8060,6 +8070,9 @@ fi
 if test -z "${HAVE_FPMATH_H_TRUE}" && test -z "${HAVE_FPMATH_H_FALSE}"; then
   as_fn_error $? "conditional \"HAVE_FPMATH_H\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${LDBL_EQ_DBL_TRUE}" && test -z "${LDBL_EQ_DBL_FALSE}"; then
+  as_fn_error $? "conditional \"LDBL_EQ_DBL\" was never defined. Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${MACH_ADD_SETJMP_TRUE}" && test -z "${MACH_ADD_SETJMP_FALSE}"; then
   as_fn_error $? "conditional \"MACH_ADD_SETJMP\" was never defined.
@@ -9490,4 +9503,3 @@ if test -n "$ac_unrecognized_opts" && test "$enable_option_checking" != no; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: unrecognized options: $ac_unrecognized_opts" >&5
 $as_echo "$as_me: WARNING: unrecognized options: $ac_unrecognized_opts" >&2;}
 fi
-

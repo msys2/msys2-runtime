@@ -50,6 +50,25 @@ import_address (void *imp)
 {
   __try
     {
+#ifdef __aarch64__
+      const uint32_t *code = (const uint32_t *) imp;
+
+      /* GNU dlltool emits an ADRP/ADD/LDR/BR import thunk using x16. */
+      if ((code[0] & 0x9f00001f) == 0x90000010
+	  && (code[1] & 0xffc003ff) == 0x91000210
+	  && code[2] == 0xf9400210
+	  && code[3] == 0xd61f0200)
+	{
+	  int64_t page_delta = (((int64_t) ((code[0] >> 5) & 0x7ffff)) << 2)
+			       | ((code[0] >> 29) & 3);
+	  if (page_delta & (INT64_C (1) << 20))
+	    page_delta -= INT64_C (1) << 21;
+	  uintptr_t page = (uintptr_t) imp & ~(uintptr_t) 0xfff;
+	  uintptr_t slot = page + (page_delta << 12)
+			   + ((code[1] >> 10) & 0xfff);
+	  return *(void **) slot;
+	}
+#else
       if (*((uint16_t *) imp) == 0x25ff)
 	{
 	  const char *ptr = (const char *) imp;
@@ -57,6 +76,7 @@ import_address (void *imp)
 				   (ptr + 6 + *(int32_t *)(ptr + 2));
 	  return (void *) *jmpto;
 	}
+#endif
     }
   __except (NO_ERROR) {}
   __endtry
@@ -309,6 +329,12 @@ SRWLOCK NO_COPY mallock = SRWLOCK_INIT;
 void
 malloc_init ()
 {
+#if defined (__aarch64__)
+  /* ARM64 reaches this during the DLL loader transition, before the import
+     thunks and process bookkeeping are stable enough to probe safely.  The
+     internal allocator is the default and remains selected. */
+  return;
+#endif
   /* Check if malloc is provided by application. If so, redirect all
      calls to malloc/free/realloc to application provided. This may
      happen if some other dll calls cygwin's malloc, but main code provides

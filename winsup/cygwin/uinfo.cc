@@ -53,7 +53,8 @@ cygheap_user::init ()
   if (GetEnvironmentVariableW (L"USERNAME", user_name, user_name_len)
       || GetEnvironmentVariableW (L"USER", user_name, user_name_len))
     {
-      char mb_user_name[user_name_len = sys_wcstombs (NULL, 0, user_name) + 1];
+      user_name_len = sys_wcstombs (NULL, 0, user_name) + 1;
+      char mb_user_name[user_name_len];
       sys_wcstombs (mb_user_name, user_name_len, user_name);
       set_name (mb_user_name);
     }
@@ -614,7 +615,7 @@ void
 cygheap_pwdgrp::nss_init_line (const char *line)
 {
   const char *c = line + strspn (line, " \t");
-  char *comment = strchr (c, '#');
+  char *comment = const_cast<char *> (strchr (c, '#'));
   if (comment)
     *comment = '\0';
   switch (*c)
@@ -842,7 +843,8 @@ fetch_from_description (PCWSTR desc, PCWSTR search, size_t len)
   PWCHAR s, e;
   char *ret = NULL;
 
-  if ((s = wcsstr (desc, L"<cygwin ")) && (e = wcsstr (s + 8, L"/>")))
+  if ((s = const_cast<PWCHAR> (wcsstr (desc, L"<cygwin ")))
+      && (e = const_cast<PWCHAR> (wcsstr (s + 8, L"/>"))))
     {
       s += 8;
       while (s && s < e)
@@ -1727,7 +1729,7 @@ pwdgrp::fetch_account_from_line (fetch_user_arg_t &arg, const char *line)
     {
     case SID_arg:
       /* Ignore fields, just scan for SID string. */
-      if (!(p = strstr (line, arg.name)) || p[arg.len] != ':')
+      if (!(p = const_cast<char *> (strstr (line, arg.name))) || p[arg.len] != ':')
 	return NULL;
       break;
     case NAME_arg:
@@ -1737,7 +1739,8 @@ pwdgrp::fetch_account_from_line (fetch_user_arg_t &arg, const char *line)
       break;
     case ID_arg:
       /* Skip to third field. */
-      if (!(p = strchr (line, ':')) || !(p = strchr (p + 1, ':')))
+      if (!(p = const_cast<char *> (strchr (line, ':')))
+          || !(p = strchr (p + 1, ':')))
 	return NULL;
       if (strtoul (p + 1, &e, 10) != arg.id || !e || *e != ':')
 	return NULL;

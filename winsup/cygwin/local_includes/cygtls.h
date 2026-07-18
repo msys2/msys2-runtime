@@ -246,6 +246,8 @@ public: /* Do NOT remove this public: line, it's a marker for gentls_offsets. */
       {
 #ifdef __x86_64__
 	__asm__ ("pause");
+#elif defined (__aarch64__)
+	__asm__ ("yield");
 #else
 #error unimplemented for this target
 #endif
@@ -323,7 +325,11 @@ public:
        address of the _except block to restore the context correctly.
        See comment preceeding myfault_altstack_handler in exception.cc. */
     ret = (DWORD64) _ret;
+#ifdef __aarch64__
+    __asm__ volatile ("mov %0, sp" : "=r" (frame));
+#else
     __asm__ volatile ("movq %%rsp,%0": "=o" (frame));
+#endif
   }
   ~san () __attribute__ ((always_inline))
   {
@@ -336,6 +342,15 @@ public:
 };
 
 /* Exception handling macros. This is a handmade SEH try/except. */
+#ifdef __aarch64__
+/* Clang can generate Windows ARM64 scope records directly.  Keep the public
+   macro shape, including the errno side effect expected by callers. */
+#define __try __try
+#define __leave __leave
+#define __except(__errno) \
+  __except (EXCEPTION_EXECUTE_HANDLER) { if (__errno) set_errno (__errno);
+#define __endtry }
+#else
 #define __mem_barrier	__asm__ __volatile__ ("" ::: "memory")
 #define __try \
   { \
@@ -371,6 +386,7 @@ public:
     __l_endtry: \
       __mem_barrier; \
   }
+#endif
 
 class wait_signal_arrived
 {

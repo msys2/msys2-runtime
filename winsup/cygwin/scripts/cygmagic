@@ -9,7 +9,8 @@
 
 set -e
 shopt -s -o pipefail
-shopt -s inherit_errexit
+# Bash 3.2 (still shipped by macOS) predates inherit_errexit.
+shopt -s inherit_errexit 2>/dev/null || true
 
 file_magic=$1; shift
 gcc=$1; shift

@@ -83,6 +83,22 @@ bool NO_COPY wsock_started;
   .set		" #dllname "_primed, 1			\n\
 .endif							\n\
 ");
+#elif defined (__aarch64__)
+#define LoadDLLprime(dllname, init_also, no_resolve_on_fork) __asm__ ("\n\
+.ifndef " #dllname "_primed                              \n\
+  .section .data_cygwin_nocopy,\"w\"                     \n\
+  .p2align 3                                             \n\
+." #dllname "_info:                                      \n\
+  .quad 0                                                \n\
+  .quad " #no_resolve_on_fork "                          \n\
+  .long -1                                               \n\
+  .long 0                                                \n\
+  .quad " #init_also "                                   \n\
+  .asciz \"" #dllname ".dll\"                            \n\
+  .text                                                  \n\
+  .set " #dllname "_primed, 1                            \n\
+.endif                                                   \n\
+");
 #else
 #error unimplemented for this target
 #endif
@@ -122,6 +138,63 @@ _win32_" #name ":					\n\
 3:.quad		1b					\n\
   .asciz	\"" #name "\"				\n\
   .text							\n\
+");
+#elif defined (__aarch64__)
+/* Windows ARM64 has no direct branch capable of spanning the full address
+   space.  Keep a naturally aligned pointer beside each stub and use a generic
+   first-call path which preserves every register that may carry an argument. */
+#define LoadDLLfuncEx3(name, dllname, notimp, err, no_resolve_on_fork) \
+  LoadDLLprime (dllname, dll_func_load, no_resolve_on_fork) \
+  __asm__ ("                                               \n\
+  .section ." #dllname "_autoload_text,\"xr\"              \n\
+  .global " #name "                                      \n\
+  .global _win32_" #name "                               \n\
+  .p2align 4                                             \n\
+" #name ":                                               \n\
+_win32_" #name ":                                       \n\
+  adrp x16, 3f                                           \n\
+  add  x16, x16, :lo12:3f                                \n\
+  ldr  x17, [x16]                                        \n\
+  cbz  x17, 1f                                           \n\
+  br   x17                                               \n\
+1:sub  sp, sp, #208                                      \n\
+  stp  x0, x1, [sp, #0]                                  \n\
+  stp  x2, x3, [sp, #16]                                 \n\
+  stp  x4, x5, [sp, #32]                                 \n\
+  stp  x6, x7, [sp, #48]                                 \n\
+  stp  q0, q1, [sp, #64]                                 \n\
+  stp  q2, q3, [sp, #96]                                 \n\
+  stp  q4, q5, [sp, #128]                                \n\
+  stp  q6, q7, [sp, #160]                                \n\
+  str  x30, [sp, #192]                                   \n\
+  adrp x0, 2f                                            \n\
+  add  x0, x0, :lo12:2f                                  \n\
+  bl   autoload_resolve_arm64                             \n\
+  mov  x17, x0                                           \n\
+  ldp  x0, x1, [sp, #0]                                  \n\
+  ldp  x2, x3, [sp, #16]                                 \n\
+  ldp  x4, x5, [sp, #32]                                 \n\
+  ldp  x6, x7, [sp, #48]                                 \n\
+  ldp  q0, q1, [sp, #64]                                 \n\
+  ldp  q2, q3, [sp, #96]                                 \n\
+  ldp  q4, q5, [sp, #128]                                \n\
+  ldp  q6, q7, [sp, #160]                                \n\
+  ldr  x30, [sp, #192]                                   \n\
+  add  sp, sp, #208                                      \n\
+  cbnz x17, 4f                                           \n\
+  adrp x16, 2f                                           \n\
+  add  x16, x16, :lo12:2f                                \n\
+  ldrsh w0, [x16, #10]                                   \n\
+  ret                                                    \n\
+4:br   x17                                               \n\
+  .p2align 3                                             \n\
+2:.quad ." #dllname "_info                               \n\
+  .hword " #notimp "                                    \n\
+  .hword ((" #err ") & 0xffff)                           \n\
+  .long 0                                                \n\
+3:.quad 0                                                \n\
+  .asciz \"" #name "\"                                   \n\
+  .text                                                  \n\
 ");
 #else
 #error unimplemented for this target
@@ -203,6 +276,11 @@ dll_chain:								\n\
 	push	%rax		# Restore 'return address'		\n\
 	jmp	*%rdx		# Jump to next init function		\n\
 ");
+#elif defined (__aarch64__)
+/* ARM64 resolves through autoload_resolve_arm64 below; these symbols remain
+   as data markers used by the common DLL metadata. */
+void dll_func_load () {}
+void dll_chain () {}
 #else
 #error unimplemented for this target
 #endif
@@ -216,7 +294,11 @@ struct dll_info
   HANDLE handle;
   LONG here;
   void (*init) ();
+#ifdef __aarch64__
+  char name[];
+#else
   WCHAR name[];
+#endif
 };
 
 struct func_info
@@ -239,6 +321,7 @@ union retchain
 
   http://www.microsoft.com/technet/security/advisory/2269637.mspx
   https://msdn.microsoft.com/library/ff919712 */
+#ifndef __aarch64__
 static __inline bool
 dll_load (HANDLE& handle, PWCHAR name)
 {
@@ -256,6 +339,27 @@ dll_load (HANDLE& handle, PWCHAR name)
   handle = h;
   return true;
 }
+#endif
+
+#ifdef __aarch64__
+static __inline bool
+dll_load (HANDLE& handle, const char *name)
+{
+  char dll_path[MAX_PATH];
+  size_t prefix = wcstombs (dll_path, windows_system_directory,
+			    sizeof dll_path - 1);
+  if (prefix == (size_t) -1 || prefix >= sizeof dll_path)
+    return false;
+  strlcpy (dll_path + prefix, name, sizeof dll_path - prefix);
+  HANDLE h = LoadLibraryA (dll_path);
+  if (!h)
+    h = LoadLibraryA (name);
+  if (!h)
+    return false;
+  handle = h;
+  return true;
+}
+#endif
 
 #define RETRY_COUNT 10
 
@@ -300,6 +404,9 @@ _" #func ":								\n\
 
 INIT_WRAPPER (std_dll_init)
 
+#elif defined (__aarch64__)
+/* ARM64 does not rewrite a caller return address.  Its first-call stub passes
+   func_info directly to the resolver, so no ABI wrapper is required. */
 #else
 #error unimplemented for this target
 #endif
@@ -345,7 +452,11 @@ std_dll_init (struct func_info *func)
 	  if ((func->decoration & 1))
 	    dll->handle = INVALID_HANDLE_VALUE;
 	  else
+#ifdef __aarch64__
+	    api_fatal ("unable to load %s, %E", dll->name);
+#else
 	    api_fatal ("unable to load %W, %E", dll->name);
+#endif
 	}
       fesetenv (&fpuenv);
     }
@@ -363,6 +474,8 @@ std_dll_init (struct func_info *func)
 #ifdef __x86_64__
 /* See above comment preceeding std_dll_init. */
 INIT_WRAPPER (wsock_init)
+#elif defined (__aarch64__)
+/* The ARM64 resolver calls the implementation directly. */
 #else
 #error unimplemented for this target
 #endif
@@ -412,6 +525,45 @@ wsock_init (struct func_info *func)
   ret.high = (uintptr_t) func;
   return ret.ll;
 }
+
+#ifdef __aarch64__
+extern "C" two_addr_t
+_wsock_init (struct func_info *func)
+{
+  return wsock_init (func);
+}
+
+/* Resolve one generated stub.  The assembly caller has saved x0-x7 and
+   q0-q7, so this function may freely use the normal Windows ARM64 ABI. */
+extern "C" uintptr_t
+autoload_resolve_arm64 (struct func_info *func)
+{
+  struct dll_info *dll = func->dll;
+
+  if ((uintptr_t) dll->handle <= 1)
+    std_dll_init (func);
+
+  /* winsock has one extra, process-wide initialization step. */
+  if (dll->init == (void (*) ()) _wsock_init)
+    wsock_init (func);
+
+  FARPROC addr = GetProcAddress ((HMODULE) dll->handle, func->name);
+  if (!addr)
+    {
+      if (func->decoration & 1)
+	{
+	  SetLastError (ERROR_PROC_NOT_FOUND);
+	  return 0;
+	}
+      api_fatal ("couldn't dynamically determine load address for '%s' "
+		 "(handle %p), %E", func->name, dll->handle);
+    }
+
+  InterlockedExchangePointer ((PVOID volatile *) &func->func_addr,
+			      (PVOID) addr);
+  return (uintptr_t) addr;
+}
+#endif
 
 LoadDLLprime (ws2_32, _wsock_init, 0)
 

@@ -59,7 +59,7 @@ static int
 _gettemp(char *path, int *doopen, int domkdir, size_t suffixlen, int flags)
 {
   char *start, *trv, *suffp;
-  char *pad;
+  const char *pad;
 
   if (doopen && domkdir)
     {

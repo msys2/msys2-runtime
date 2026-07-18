@@ -38,6 +38,12 @@ extern inline struct _reent *__getreent (void)
   register char *ret;
 #ifdef __x86_64__
   __asm __volatile__ ("movq %%gs:8,%0" : "=r" (ret));
+#elif defined (__aarch64__)
+  /* Windows ARM64 reserves x18 as the TEB pointer.  Cygwin/MSYS stores the
+     top of its per-thread cygtls area in the pointer slot at TEB + 8. */
+  register char *teb;
+  __asm __volatile__ ("mov %0, x18" : "=r" (teb));
+  ret = *(char **) (teb + 8);
 #else
 #error unimplemented for this target
 #endif

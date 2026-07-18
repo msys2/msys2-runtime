@@ -247,7 +247,7 @@ setprogname (const char *newprogname)
       /* Per BSD man page, setprogname keeps a pointer to the last
 	 path component of the argument.  It does *not* copy the
 	 argument before. */
-      __progname = strrchr (newprogname, '/');
+      __progname = const_cast<char *> (strrchr (newprogname, '/'));
       if (__progname)
 	++__progname;
       else

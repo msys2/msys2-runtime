@@ -327,7 +327,9 @@ typedef __PTRDIFF_TYPE__ __ptrdiff_t;
 typedef long int __ptrdiff_t;
 #endif
 
-#ifdef __WCHAR_TYPE__
+#if defined(__MSYS_CLANG_MS_EXTENSIONS__) && defined(__clang__) && defined(__cplusplus)
+/* With -fms-extensions Clang provides __wchar_t as a builtin type. */
+#elif defined(__WCHAR_TYPE__)
 typedef __WCHAR_TYPE__ __wchar_t;
 #elif defined (__WCHAR_MAX__) && __WCHAR_MAX__ == 0xffff
 typedef short unsigned int __wchar_t;

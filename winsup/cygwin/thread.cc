@@ -79,8 +79,14 @@ pthread_mutex::no_owner()
 }
 
 #undef __getreent
+#ifdef __aarch64__
+extern "C" struct _reent *__getreent_export () __asm__ ("__getreent");
+extern "C" struct _reent *
+__getreent_export ()
+#else
 extern "C" struct _reent *
 __getreent ()
+#endif
 {
   return &_my_tls.local_clib;
 }
@@ -647,6 +653,9 @@ pthread::cancel ()
 	  if ((context.Rsp & 8) == 0)
 	    context.Rsp -= 8;
 	  context.Rip = (ULONG_PTR) pthread::static_cancel_self;
+#elif defined (__aarch64__)
+	  context.Sp &= ~0x0fULL;
+	  context.Pc = (ULONG_PTR) pthread::static_cancel_self;
 #else
 #error unimplemented for this target
 #endif
@@ -1966,7 +1975,11 @@ pthread_spinlock::lock ()
       else if (spins < FAST_SPINS_LIMIT)
         {
           ++spins;
+#ifdef __aarch64__
+          __asm__ volatile ("yield":::);
+#else
           __asm__ volatile ("pause":::);
+#endif
         }
       else
 	{
