@@ -99,6 +99,27 @@ pthread_wrapper (PVOID arg)
 	   call  *%%r12			# Call thread func		\n"
 	   : : [WRAPPER_ARG] "o" (wrapper_arg),
 	       [CYGTLS] "i" (__CYGTLS_PADSIZE__));
+#elif defined (__aarch64__)
+  __asm__ volatile ("\n\
+	 mov x9, %[WRAPPER_ARG]                                  \n\
+	 ldr x19, [x9, #0]       // thread function              \n\
+	 ldr x20, [x9, #8]       // thread argument              \n\
+	 ldr x0,  [x9, #16]      // old OS stack allocation      \n\
+	 ldr x21, [x9, #24]      // new stack base               \n\
+	 mov sp, x21                                             \n\
+	 mov x10, %[CYGTLS]                                     \n\
+	 sub sp, sp, x10                                        \n\
+	 mov x1, xzr             // dwSize: 0                    \n\
+	 mov x2, #0x8000         // dwFreeType: MEM_RELEASE      \n\
+	 bl VirtualFree                                          \n\
+	 mov x0, x20                                             \n\
+	 blr x19                                                 \n\
+"
+	   :
+	   : [WRAPPER_ARG] "r" (&wrapper_arg),
+	     [CYGTLS] "i" (__CYGTLS_PADSIZE__)
+	   : "x0", "x1", "x2", "x9", "x10", "x19", "x20", "x21",
+	     "x30", "memory");
 #else
 #error unimplemented for this target
 #endif
@@ -124,7 +145,7 @@ class thread_allocator
       THREAD_STACK_SLOT
     };
     /* g++ 11.2 workaround: don't use initializer */
-    MEM_EXTENDED_PARAMETER thread_ext = { 0 };
+    MEM_EXTENDED_PARAMETER thread_ext = {{ 0 }};
     thread_ext.Type = MemExtendedParameterAddressRequirements;
     thread_ext.Pointer = (PVOID) &thread_req;
 
@@ -145,7 +166,7 @@ class thread_allocator
 	  THREAD_STACK_SLOT
 	};
 	/* g++ 11.2 workaround: don't use initializer */
-	MEM_EXTENDED_PARAMETER mmap_ext = { 0 };
+	MEM_EXTENDED_PARAMETER mmap_ext = {{ 0 }};
 	mmap_ext.Type = MemExtendedParameterAddressRequirements;
 	mmap_ext.Pointer = (PVOID) &mmap_req;
 

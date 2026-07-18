@@ -44,6 +44,14 @@ details. */
 #define _MC_instPtr	rip
 #define _MC_stackPtr	rsp
 #define _MC_uclinkReg	rbx	/* MUST be callee-saved reg */
+#elif defined (__aarch64__)
+#define _CX_instPtr Pc
+#define _CX_stackPtr Sp
+#define _CX_framePtr Fp
+#define _MC_retReg x[0]
+#define _MC_instPtr pc
+#define _MC_stackPtr sp
+#define _MC_uclinkReg x[19] /* x19 is callee-saved */
 #else
 #error unimplemented for this target
 #endif
@@ -251,6 +259,23 @@ cygwin_exception::dump_exception ()
   small_printf ("cs=%04x ds=%04x es=%04x fs=%04x gs=%04x ss=%04x\r\n",
 		ctx->SegCs, ctx->SegDs, ctx->SegEs, ctx->SegFs,
 		ctx->SegGs, ctx->SegSs);
+#elif defined (__aarch64__)
+  if (exception_name)
+    small_printf ("Exception: %s at pc=%016X\r\n", exception_name, ctx->Pc);
+  else
+    small_printf ("Signal %d at pc=%016X\r\n", e->ExceptionCode, ctx->Pc);
+  small_printf ("x0 =%016X x1 =%016X x2 =%016X\r\n",
+		ctx->X0, ctx->X1, ctx->X2);
+  small_printf ("x3 =%016X x4 =%016X x5 =%016X\r\n",
+		ctx->X3, ctx->X4, ctx->X5);
+  small_printf ("x6 =%016X x7 =%016X x8 =%016X\r\n",
+		ctx->X6, ctx->X7, ctx->X8);
+  small_printf ("x19=%016X x20=%016X x21=%016X\r\n",
+		ctx->X19, ctx->X20, ctx->X21);
+  small_printf ("fp =%016X lr =%016X sp =%016X\r\n",
+		ctx->Fp, ctx->Lr, ctx->Sp);
+  small_printf ("program=%W, pid %u, thread %s\r\n",
+		myself->progname, myself->pid, mythreadname ());
 #else
 #error unimplemented for this target
 #endif
@@ -324,8 +349,13 @@ __unwind_single_frame (PCONTEXT ctx)
 		      &establisher, NULL);
   else
     {
+#ifdef __aarch64__
+      ctx->_CX_instPtr = ctx->Lr;
+      ctx->Lr = 0;
+#else
       ctx->_CX_instPtr = *(ULONG_PTR *) ctx->_CX_stackPtr;
       ctx->_CX_stackPtr += 8;
+#endif
     }
 }
 
@@ -1111,7 +1141,7 @@ out:
   return interrupted;
 }
 
-static inline bool
+static inline bool __attribute__ ((unused))
 has_visible_window_station ()
 {
   HWINSTA station_hdl;
@@ -1816,6 +1846,8 @@ _cygtls::call_signal_handler ()
 		{
 #ifdef __x86_64__
 		  context1.uc_mcontext.rip = retaddr ();
+#elif defined (__aarch64__)
+		  context1.uc_mcontext.pc = (uintptr_t) retaddr ();
 #else
 #error unimplemented for this target
 #endif
@@ -1935,6 +1967,11 @@ _cygtls::call_signal_handler ()
 		       [FUNC]	"o" (thisfunc),
 		       [WRAPPER] "o" (altstack_wrapper)
 		   : "memory");
+#elif defined (__aarch64__)
+	  /* TODO: switch SP in a dedicated out-of-line ARM64 SEH thunk.  Calling
+	     through the wrapper keeps signal delivery functional while bringing
+	     up the rest of the runtime, but SA_ONSTACK is not yet honoured. */
+	  altstack_wrapper (thissig, &thissi, thiscontext, thisfunc);
 #else
 #error unimplemented for this target
 #endif
@@ -2076,6 +2113,23 @@ __cont_link_context:			\n\
 	.seh_endproc			\n\
 	");
 
+#elif defined (__aarch64__)
+/* x19 contains the address of the saved uc_link slot. */
+__asm__ ("\t\t\t\t\n\
+\t.global\t__cont_link_context\t\n\
+\t.seh_proc __cont_link_context\t\n\
+__cont_link_context:\t\t\t\n\
+\t.seh_endprologue\t\t\n\
+\tmov\tsp, x19\t\t\n\
+\tldr\tx0, [x19]\t\t\n\
+\tcbz\tx0, 1f\t\t\n\
+\tbl\tsetcontext\t\t\n\
+\tmov\tx0, #255\t\t\n\
+1:\t\t\t\t\n\
+\tbl\tcygwin_exit\t\t\n\
+\tbrk\t#0\t\t\t\n\
+\t.seh_endproc\t\t\t\n\
+\t");
 #else
 #error unimplemented for this target
 #endif
@@ -2141,6 +2195,14 @@ makecontext (ucontext_t *ucp, void (*func) (void), int argc, ...)
 	sp[i + 1] = va_arg (ap, uintptr_t);
 	break;
       }
+#elif defined (__aarch64__)
+    {
+      uintptr_t arg = va_arg (ap, uintptr_t);
+      if (i < 8)
+	ucp->uc_mcontext.x[i] = arg;
+      else
+	sp[i + 1] = arg;
+    }
 #else
 #error unimplemented for this target
 #endif
@@ -2156,4 +2218,7 @@ makecontext (ucontext_t *ucp, void (*func) (void), int argc, ...)
   ucp->uc_mcontext._MC_instPtr = (uint64_t) func;
   ucp->uc_mcontext._MC_stackPtr = (uint64_t) sp;
   ucp->uc_mcontext._MC_uclinkReg = (uint64_t) (sp + argc + 1);
+#ifdef __aarch64__
+  ucp->uc_mcontext.x[30] = (uint64_t) __cont_link_context;
+#endif
 }

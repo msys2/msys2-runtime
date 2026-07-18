@@ -27,6 +27,7 @@ details. */
    references to these operators toward the redirectors in the Cygwin DLL; this
    way we can record what definitions were visible at final link time but still
    send all calls to the redirectors.  */
+#ifndef __aarch64__
 extern WEAK void *operator new(std::size_t sz) noexcept (false)
 			__asm__ (REAL_ZNWX);
 extern WEAK void *operator new[](std::size_t sz) noexcept (false)
@@ -43,9 +44,25 @@ extern WEAK void operator delete(void *p, const std::nothrow_t &nt) noexcept (tr
 			__asm__ (REAL_ZDLPV_NOTHROW_T);
 extern WEAK void operator delete[](void *p, const std::nothrow_t &nt) noexcept (true)
 			__asm__ (REAL_ZDAPV_NOTHROW_T);
+#else
+extern "C" WEAK void *__real__Znwm (std::size_t);
+extern "C" WEAK void *__real__Znam (std::size_t);
+extern "C" WEAK void __real__ZdlPv (void *);
+extern "C" WEAK void __real__ZdaPv (void *);
+extern "C" WEAK void *__real__ZnwmRKSt9nothrow_t (std::size_t,
+						   const std::nothrow_t &);
+extern "C" WEAK void *__real__ZnamRKSt9nothrow_t (std::size_t,
+						   const std::nothrow_t &);
+extern "C" WEAK void __real__ZdlPvRKSt9nothrow_t (void *,
+						   const std::nothrow_t &);
+extern "C" WEAK void __real__ZdaPvRKSt9nothrow_t (void *,
+						   const std::nothrow_t &);
+#endif
 
 /* Avoid an info message from linker when linking applications.  */
+#ifndef __aarch64__
 extern __declspec(dllimport) struct _reent *_impure_ptr;
+#endif
 
 /* Initialised in _cygwin_dll_entry. */
 extern int __dynamically_loaded;
@@ -63,10 +80,17 @@ extern char __image_base__;
 
 struct per_process_cxx_malloc __cygwin_cxx_malloc =
 {
+#ifndef __aarch64__
   &(operator new), &(operator new[]),
   &(operator delete), &(operator delete[]),
   &(operator new), &(operator new[]),
   &(operator delete), &(operator delete[])
+#else
+  __real__Znwm, __real__Znam,
+  __real__ZdlPv, __real__ZdaPv,
+  __real__ZnwmRKSt9nothrow_t, __real__ZnamRKSt9nothrow_t,
+  __real__ZdlPvRKSt9nothrow_t, __real__ZdaPvRKSt9nothrow_t
+#endif
 };
 
 /* Set up pointers to various pieces so the dll can then use them,

@@ -44,6 +44,8 @@ get_thrpc (HANDLE thr)
   if (GetThreadContext (thr, &ctx)) {
 #ifdef __x86_64__
     pc = ctx.Rip;
+#elif defined (__aarch64__)
+    pc = ctx.Pc;
 #else
 #error unimplemented for this target
 #endif
@@ -252,4 +254,3 @@ profil (char *samples, size_t size, size_t offset, uint32_t scale)
 {
   return profile_ctl (&prof, samples, size, offset, scale);
 }
-

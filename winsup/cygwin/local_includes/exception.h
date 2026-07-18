@@ -7,7 +7,9 @@ details. */
 #pragma once
 
 #define exception_list void
+#ifndef __aarch64__
 typedef struct _DISPATCHER_CONTEXT *PDISPATCHER_CONTEXT;
+#endif
 
 class exception
 {
@@ -15,6 +17,7 @@ class exception
 					CONTEXT *, PDISPATCHER_CONTEXT);
   static EXCEPTION_DISPOSITION handle (EXCEPTION_RECORD *, exception_list *,
 				       CONTEXT *, PDISPATCHER_CONTEXT);
+#ifndef __aarch64__
 public:
   exception () __attribute__ ((always_inline))
   {
@@ -36,6 +39,13 @@ public:
     2:									\n\
       nop								\n");
   }
+#else
+public:
+  /* Clang emits native ARM64 SEH for the __try macros below.  The handful of
+     legacy RAII guard sites need no inline scope-table fragment on ARM64. */
+  exception () = default;
+  ~exception () = default;
+#endif
 };
 
 LONG CALLBACK myfault_altstack_handler (EXCEPTION_POINTERS *);

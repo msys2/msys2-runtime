@@ -22,6 +22,13 @@ details. */
 
 static ptrdiff_t page_const;
 
+/* dlmalloc is entered by the DLL constructors before setup_cygheap().  On
+   ARM64, avoid treating cygheap_dummy as a fully initialized user heap; the
+   allocator's ARM64 MORECORE hook provides the small bootstrap allocation. */
+#if defined (__aarch64__)
+static bool user_heap_initialized;
+#endif
+
 /* Minimum size of the base heap. */
 #define MINHEAP_SIZE (4 * 1024 * 1024)
 /* Chunksize of subsequent heap reservations. */
@@ -176,6 +183,9 @@ user_heap_info::init ()
   debug_printf ("heap base %p, heap top %p, heap size %ly (%lu)",
 		base, top, chunk, chunk);
   page_const--;
+#if defined (__aarch64__)
+  user_heap_initialized = true;
+#endif
 }
 
 #define pround(n) (((size_t)(n) + page_const) & ~page_const)
@@ -185,6 +195,10 @@ user_heap_info::init ()
 extern "C" void *
 sbrk (ptrdiff_t n)
 {
+#if defined (__aarch64__)
+  if (!user_heap_initialized)
+    return (void *) -1;
+#endif
   return cygheap->user_heap.sbrk (n);
 }
 

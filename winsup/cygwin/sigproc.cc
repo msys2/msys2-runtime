@@ -544,7 +544,7 @@ sigproc_init ()
   /* sync_proc_subproc is used by proc_subproc.  It serializes
      access to the children and proc arrays.  */
   sync_proc_subproc.init ("sync_proc_subproc");
-  new cygthread (wait_sig, cygself, "sig");
+  new cygthread ((LPVOID_THREAD_START_ROUTINE) wait_sig, cygself, "sig");
 }
 
 /* Exit the current thread very carefully.
@@ -890,7 +890,12 @@ out:
   return rc;
 }
 
-int child_info::retry_count = 0;
+int child_info::retry_count =
+#if defined (__aarch64__)
+  4;
+#else
+  0;
+#endif
 
 /* Initialize some of the memory block passed to child processes
    by fork/spawn/exec. */
@@ -1181,10 +1186,21 @@ child_info::proc_retry (HANDLE h)
       sigproc_printf ("STILL_ACTIVE?  How'd we get here?");
       break;
     case STATUS_DLL_NOT_FOUND:
-    case STATUS_ACCESS_VIOLATION:
     case STATUS_ILLEGAL_INSTRUCTION:
     case STATUS_ILLEGAL_DLL_PSEUDO_RELOCATION: /* pseudo-reloc.c specific */
       return exit_code;
+    case STATUS_ACCESS_VIOLATION:
+#if defined (__aarch64__)
+    case STATUS_SXS_CORRUPT_ACTIVATION_STACK:
+      /* QEMU can occasionally terminate a newly created ARM64 child while it
+         rebuilds the inherited process state.  A fresh CreateProcess attempt
+         is safe before the child has synchronized with its parent. */
+      if (retry-- > 0)
+        exit_code = 0;
+      break;
+#else
+      return exit_code;
+#endif
     case STATUS_CONTROL_C_EXIT:
       if (saw_ctrl_c ())
 	return EXITCODE_OK;

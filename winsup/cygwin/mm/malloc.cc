@@ -539,6 +539,17 @@ MAX_RELEASE_CHECK_RATE   default: 4095 unless not HAVE_MMAP
 #define WIN32 1
 #endif /* _WIN32_WCE */
 #endif  /* WIN32 */
+
+/* The Cygwin/MSYS fork implementation copies the user heap explicitly.
+   Native ARM64 address randomization makes the standalone Win32 mmap arena
+   impossible to reconstruct reliably in a freshly created forkee. */
+#if defined (__CYGWIN__) && defined (__aarch64__) \
+    && !defined (__MSYS_ARM64_WIN32_MALLOC)
+#undef WIN32
+#define HAVE_MMAP 0
+#define HAVE_MORECORE 1
+#endif
+
 #ifdef WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -1636,6 +1647,39 @@ unsigned char _BitScanReverse(unsigned long *index, unsigned long mask);
 /* MORECORE and MMAP must return MFAIL on failure */
 #define MFAIL                ((void*)(MAX_SIZE_T))
 #define CMFAIL               ((char*)(MFAIL)) /* defined for convenience */
+
+#if defined (__CYGWIN__) && defined (__aarch64__) \
+    && !defined (__MSYS_ARM64_WIN32_MALLOC)
+/* DLL constructors allocate before cygheap installs the normal user heap.
+   Keep this arena inside the image so it is present at the same address in a
+   CreateProcess-based forkee without requiring the loader to service an
+   imported VirtualAlloc call. */
+static unsigned char arm64_msys_bootstrap_heap[4 * 1024 * 1024]
+  __attribute__ ((aligned (16)));
+static size_t arm64_msys_bootstrap_used;
+
+static void *
+arm64_msys_morecore (ptrdiff_t size)
+{
+  void *result = sbrk (size);
+  if (result && result != (void *) -1)
+    return result;
+
+  if (size == 0)
+    return arm64_msys_bootstrap_heap + arm64_msys_bootstrap_used;
+  if (size < 0)
+    return MFAIL;
+
+  size_t allocation = ((size_t) size + 15) & ~((size_t) 15);
+  if (allocation > sizeof arm64_msys_bootstrap_heap
+      - arm64_msys_bootstrap_used)
+    return MFAIL;
+  result = arm64_msys_bootstrap_heap + arm64_msys_bootstrap_used;
+  arm64_msys_bootstrap_used += allocation;
+  return result;
+}
+#define MORECORE arm64_msys_morecore
+#endif
 
 #if HAVE_MMAP
 
@@ -4017,6 +4061,7 @@ static void add_segment(mstate m, char* tbase, size_t tsize, flag_t mmapped) {
       break;
   }
   assert(nfences >= 2);
+  (void) nfences;
 
   /* Insert the rest of old top into a bin as an ordinary free chunk */
   if (csp != old_top) {

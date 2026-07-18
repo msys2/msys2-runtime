@@ -22,6 +22,7 @@ if (!defined($cpu) || !defined($output_def)) {
 }
 
 my $is_x86_64 = $cpu eq 'x86_64';
+my $is_aarch64 = $cpu eq 'aarch64';
 # FIXME? Do other (non-32 bit) arches on Windows still use symbol prefixes?
 my $sym_prefix = '';
 
@@ -30,6 +31,15 @@ while (<>) {
     push(@top, cleanup $_);
     last if /^\s*exports$/oi;
 }
+
+# The x86_64 runtime keeps its historical 0x180040000 base.  The ARM64
+# port's startup and fork address calculations use the Windows ARM64 DLL base
+# at 0x180000000 instead.
+if ($is_aarch64) {
+    $top[0] =~ s/\s+BASE=0x[[:xdigit:]]+//i;
+    $top[0] =~ s/\n?$/ BASE=0x180000000\n/;
+}
+
 my @in = cleanup <>;
 
 my %sigfe = ();
@@ -38,6 +48,10 @@ my @nosigfuncs = ();
 my @text = ();
 for (@in) {
     chomp;
+    # ARM64 has no caller-visible alloca helper or x87 precision-control
+    # mode.  Do not advertise the x86-only compatibility entries.
+    next if $is_aarch64
+      && /^(?:_alloca\s*=|fegetprec\b|fesetprec\b)/;
     s/\s+DATA$//o and do {
 	push @data, $_;
 	next;
@@ -106,6 +120,15 @@ $fe:
 	.seh_endprologue
 	jmp	$sigfe_func
 	.seh_endproc
+
+EOF
+    }
+    if ($is_aarch64) {
+	$res = <<EOF;
+	.extern	$func
+	.global	$fe
+$fe:
+	b	$func
 
 EOF
     }
