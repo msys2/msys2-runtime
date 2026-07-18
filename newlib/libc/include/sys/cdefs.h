@@ -543,7 +543,14 @@
 #if defined(__GNUC__)
 #define	__strong_reference(sym,aliassym)	\
 	extern __typeof (sym) aliassym __attribute__ ((__alias__ (#sym)))
-#ifdef __ELF__
+#if (defined(__CYGWIN__) || defined(__MSYS__)) && defined(__aarch64__)
+/* ARM64 PE/COFF has no STABS support.  Keep weak aliases in ordinary
+   assembler syntax and omit link-time advisory strings. */
+#define __weak_reference(sym,alias) \
+	__asm__(".weak " #alias); \
+	__asm__(".equ " #alias ", " #sym)
+#define __warn_references(sym,msg)
+#elif defined(__ELF__)
 #ifdef __STDC__
 #define	__weak_reference(sym,alias)	\
 	__asm__(".weak " #alias);	\

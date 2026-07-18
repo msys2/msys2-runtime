@@ -40,7 +40,9 @@
 	.text
 	.p2align \p2align
 	.global \f
+#if !defined(__CYGWIN__) && !defined(__MSYS__)
 	.type \f, %function
+#endif
 \f:
 	.endm
 
@@ -63,6 +65,7 @@ L(do_strlen):
 	ret	x15
 	.cfi_endproc
 
-	.size   rawmemchr, . - rawmemchr
+#if !defined(__CYGWIN__) && !defined(__MSYS__)
+	.size	rawmemchr, . - rawmemchr
 #endif
-
+#endif

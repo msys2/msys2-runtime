@@ -723,6 +723,7 @@ rm -f conftest*])
 if test $newlib_cv_ldbl_eq_dbl = yes; then
   AC_DEFINE(_LDBL_EQ_DBL, 1, [Define if the platform long double type is equal to double.])
 fi
+AM_CONDITIONAL(LDBL_EQ_DBL, test x"$newlib_cv_ldbl_eq_dbl" = x"yes")
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT

@@ -50,7 +50,9 @@
 
 /* If set then the GNU Property Note section will be added to
    mark objects to support BTI and PAC-RET.  */
-#ifndef WANT_GNU_PROPERTY
+#if defined(__CYGWIN__) || defined(__MSYS__)
+#define WANT_GNU_PROPERTY 0
+#elif !defined(WANT_GNU_PROPERTY)
 #define WANT_GNU_PROPERTY 1
 #endif
 
@@ -59,6 +61,21 @@
 GNU_PROPERTY (FEATURE_1_AND, FEATURE_1_BTI|FEATURE_1_PAC)
 #endif
 
+#if defined(__CYGWIN__) || defined(__MSYS__)
+#define ENTRY_ALIGN(name, alignment)	\
+  .global name;		\
+  .align alignment;		\
+  name:			\
+  .cfi_startproc;	\
+  BTI_C;
+
+#define ENTRY_ALIAS(name)	\
+  .global name;		\
+  name:
+
+#define END(name)	\
+  .cfi_endproc;
+#else
 #define ENTRY_ALIGN(name, alignment)	\
   .global name;		\
   .type name,%function;	\
@@ -66,8 +83,6 @@ GNU_PROPERTY (FEATURE_1_AND, FEATURE_1_BTI|FEATURE_1_PAC)
   name:			\
   .cfi_startproc;	\
   BTI_C;
-
-#define ENTRY(name)	ENTRY_ALIGN(name, 6)
 
 #define ENTRY_ALIAS(name)	\
   .global name;		\
@@ -77,6 +92,9 @@ GNU_PROPERTY (FEATURE_1_AND, FEATURE_1_BTI|FEATURE_1_PAC)
 #define END(name)	\
   .cfi_endproc;		\
   .size name, .-name;
+#endif
+
+#define ENTRY(name)	ENTRY_ALIGN(name, 6)
 
 #define L(l) .L ## l
 
