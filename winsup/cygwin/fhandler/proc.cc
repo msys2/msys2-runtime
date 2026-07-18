@@ -2049,7 +2049,7 @@ format_proc_swaps (void *, char *&destbuf)
 	  size_t tabo = strlen (filename) / 8;	/* offset tabs to space name */
 	  bufptr += sprintf (bufptr, "%s%s%s\t\t%llu%s\t%llu%s\t%d\n",
 				    filename,
-				    tabo < 5 ? "\t\t\t\t\t" + tabo : " ",
+					    tabo < 5 ? &"\t\t\t\t\t"[tabo] : " ",
 					"file",
 					    total >> 10,
 					    total < 10000000000 ? "\t" : "",

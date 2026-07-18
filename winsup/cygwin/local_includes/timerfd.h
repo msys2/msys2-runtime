@@ -107,7 +107,8 @@ class timerfd_tracker		/* cygheap! */
       SetEvent (_disarm_evt);
       return 0;
     }
-  void timer_expired () const { timer_expired (); }
+  void timer_expired () const
+    { const_cast<timerfd_tracker *> (this)->timer_expired (); }
 
   LONG64 expiration_count () const { return tfd_shared->_expiration_count; }
   void increment_expiration_count (LONG64 add) const

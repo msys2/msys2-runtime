@@ -2206,7 +2206,7 @@ fhandler_pty_master::write (const void *ptr, size_t len)
 	 If the reply for "CSI6n" is divided into multiple writes,
 	 pseudo console sometimes does not recognize it.  Therefore,
 	 put them together into wpbuf and write all at once. */
-      static const int wpbuf_len = strlen ("\033[32768;32868R");
+      static constexpr int wpbuf_len = sizeof ("\033[32768;32868R") - 1;
       static char wpbuf[wpbuf_len];
       static int ixput = 0;
       static int state = 0;
@@ -3475,6 +3475,7 @@ fhandler_pty_slave::setup_pseudoconsole ()
   get_ttyp ()->switch_to_nat_pipe = true;
 
   HANDLE hpConIn, hpConOut;
+  HPCON hpcon = NULL;
   if (get_ttyp ()->pcon_activated)
     { /* The pseudo console is already activated. */
       if (GetStdHandle (STD_INPUT_HANDLE) == get_handle ())
@@ -3515,8 +3516,6 @@ fhandler_pty_slave::setup_pseudoconsole ()
   PROCESS_INFORMATION pi;
   HANDLE hello, goodbye;
   HANDLE hr, hw;
-  HPCON hpcon;
-
   do
     { /* Create new pseudo console */
       COORD size = {

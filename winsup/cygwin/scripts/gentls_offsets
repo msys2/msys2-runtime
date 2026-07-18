@@ -4,12 +4,14 @@ input_file=$1
 output_file=$2
 tmp_file=/tmp/${output_file}.$$
 
-trap "rm -f ${tmp_file}" 0 1 2 15
+if test -z "$KEEP_GENTLS_TEMP"; then
+  trap "rm -f ${tmp_file}" 0 1 2 15
+fi
 
 # Preprocess cygtls.h and filter out only the member lines from
 # class _cygtls to generate an input file for the cross compiler
 # to generate the member offsets for tlsoffsets-$(target_cpu).h.
-${CXXCOMPILE} -E -P "${input_file}" 2> /dev/null | \
+${CXXCOMPILE} -x c++ -E -P "${input_file}" | tee ${tmp_file}.i | \
 gawk '
   BEGIN {
     # marker is used to split out the member lines from class _cygtls
@@ -44,7 +46,7 @@ gawk '
       print "extern \"C\" const uint32_t __CYGTLS__" $NF " = offsetof (class _cygtls, " $NF ");";
     }
   }
-' | \
+' | tee ${tmp_file}.cc | \
 # Now run the compiler to generate an assembler file.
 ${CXXCOMPILE} -x c++ -g0 -S - -o ${tmp_file} && \
 # The assembler file consists of lines like these:
@@ -62,7 +64,7 @@ start_offset=$(gawk '\
   /^__CYGTLS__/ {
     varname = gensub (/__CYGTLS__(\w+):/, "\\1", "g");
   }
-  /\s*\.long\s+/ {
+  /\s*\.(long|word)\s+/ {
     if (length (varname) > 0) {
       if (varname == "start_offset") {
 	print $2;
@@ -85,7 +87,7 @@ gawk -v start_offset="$start_offset" '\
       varname = "";
     }
   }
-  /\s*\.long\s+/ {
+  /\s*\.(long|word)\s+/ {
     if (length (varname) > 0) {
       if (varname == "start_offset") {
 	printf (".equ _cygtls.%s, -%u\n", varname, start_offset);

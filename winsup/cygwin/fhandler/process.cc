@@ -370,7 +370,7 @@ format_process_fd (void *data, char *&destbuf)
   /* path looks like "$PID/fd", "$PID/fd/", "$PID/fd/[0-9]*".  In the latter
      case a trailing slash and more followup chars are allowed, provided the
      descriptor symlink points to a directory. */
-  char *fdp = strchr (path, '/') + 3;
+  char *fdp = const_cast<char *> (strchr (path, '/')) + 3;
   /* The "fd" directory itself? */
   if (fdp[0] =='\0' || (fdp[0] == '/' && fdp[1] == '\0'))
     {

@@ -834,7 +834,7 @@ dtable::select_write (int fd, select_stuff *ss)
   if (not_open (fd))
     {
       set_errno (EBADF);
-      return NULL;
+      return false;
     }
   fhandler_base *fh = fds[fd];
   select_record *s = fh->select_write (ss);
@@ -851,7 +851,7 @@ dtable::select_except (int fd, select_stuff *ss)
   if (not_open (fd))
     {
       set_errno (EBADF);
-      return NULL;
+      return false;
     }
   fhandler_base *fh = fds[fd];
   select_record *s = fh->select_except (ss);

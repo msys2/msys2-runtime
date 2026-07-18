@@ -1085,8 +1085,8 @@ env_compare (const void *key, const void *memb)
   const char *k = *(const char **) key;
   const char *m = *(const char **) memb;
 
-  char *ke = strchr (k, '=');
-  char *me = strchr (m, '=');
+  const char *ke = strchr (k, '=');
+  const char *me = strchr (m, '=');
   if (ke == NULL || me == NULL)
     return strcasecmp (k, m);
   int ret = strncasecmp (k, m, MIN (ke - k, me - m));

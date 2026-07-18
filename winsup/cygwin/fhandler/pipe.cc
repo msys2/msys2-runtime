@@ -952,13 +952,6 @@ fhandler_pipe::create (LPSECURITY_ATTRIBUTES sa_ptr, PHANDLE r, PHANDLE w,
   return 0;
 }
 
-inline static bool
-is_running_as_service (void)
-{
-  return check_token_membership (well_known_service_sid)
-    || cygheap->user.saved_sid () == well_known_system_sid;
-}
-
 /* The next version of fhandler_pipe::create used to call the previous
    version.  But the read handle created by the latter doesn't have
    FILE_WRITE_ATTRIBUTES access unless the pipe is created with

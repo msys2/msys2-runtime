@@ -192,7 +192,7 @@ next:
 			 */
 			if (strcasecmp(host, tokval) == 0)
 				goto match;
-			if ((tmp = strchr(host, '.')) != NULL &&
+			if ((tmp = const_cast<char *> (strchr(host, '.'))) != NULL &&
 			    strcasecmp(tmp, mydomain) == 0 &&
 			    strncasecmp(host, tokval, tmp - host) == 0 &&
 			    tokval[tmp - host] == '\0')
