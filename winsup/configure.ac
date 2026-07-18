@@ -71,7 +71,7 @@ no)
 yes|auto)
     if MSYS2_RUNTIME_COMMIT="$(git --git-dir="$srcdir/../.git" rev-parse HEAD)"
     then
-        MSYS2_RUNTIME_COMMIT_SHORT="$(expr "$MSYS2_RUNTIME_COMMIT" : '\(.\{,8\}\)')"
+        MSYS2_RUNTIME_COMMIT_SHORT="$(printf '%s' "$MSYS2_RUNTIME_COMMIT" | cut -c1-8)"
         MSYS2_RUNTIME_COMMIT_HEX="0x${MSYS2_RUNTIME_COMMIT_SHORT}ul"
     else
         AC_MSG_WARN([Could not determine msys2-runtime commit])
@@ -83,7 +83,7 @@ yes|auto)
 *)
     expr "$MSYS2_RUNTIME_COMMIT" : '@<:@0-9a-f@:>@\{6,64\}$' ||
     AC_MSG_ERROR([Invalid commit name: "$MSYS2_RUNTIME_COMMIT"])
-    MSYS2_RUNTIME_COMMIT_SHORT="$(expr "$MSYS2_RUNTIME_COMMIT" : '\(.\{,8\}\)')"
+    MSYS2_RUNTIME_COMMIT_SHORT="$(printf '%s' "$MSYS2_RUNTIME_COMMIT" | cut -c1-8)"
     MSYS2_RUNTIME_COMMIT_HEX="0x${MSYS2_RUNTIME_COMMIT_SHORT}ul"
     ;;
 esac
@@ -102,13 +102,14 @@ esac
 DLL_ENTRY="dll_entry"
 
 case "$target_cpu" in
-   x86_64)	;;
+   x86_64|aarch64)	;;
    *)		AC_MSG_ERROR([Invalid target processor "$target_cpu"]) ;;
 esac
 
 AC_SUBST(DLL_ENTRY)
 
 AM_CONDITIONAL(TARGET_X86_64, [test $target_cpu = "x86_64"])
+AM_CONDITIONAL(TARGET_AARCH64, [test $target_cpu = "aarch64"])
 
 AC_ARG_ENABLE(doc,
 	      [AS_HELP_STRING([--disable-doc], [do not build documentation])],,
@@ -135,9 +136,9 @@ if test -z "$XMLTO"; then
 fi
 
 if test "x$with_cross_bootstrap" != "xyes"; then
-    AC_CHECK_PROGS(MINGW_CXX, ${target_cpu}-w64-mingw32-g++)
+    AC_CHECK_PROGS(MINGW_CXX, ${target_cpu}-w64-mingw32-clang++ ${target_cpu}-w64-mingw32-g++)
     test -n "$MINGW_CXX" || AC_MSG_ERROR([no acceptable MinGW g++ found in \$PATH])
-    AC_CHECK_PROGS(MINGW_CC, ${target_cpu}-w64-mingw32-gcc)
+    AC_CHECK_PROGS(MINGW_CC, ${target_cpu}-w64-mingw32-clang ${target_cpu}-w64-mingw32-gcc)
     test -n "$MINGW_CC" || AC_MSG_ERROR([no acceptable MinGW gcc found in \$PATH])
 
     AC_CHECK_PROGS(MINGW32_CC, i686-w64-mingw32-gcc)

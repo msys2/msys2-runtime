@@ -67,6 +67,13 @@ TARGET_FILES= \
 	x86_64/wmemmove.S \
 	x86_64/wmempcpy.S
 endif
+if TARGET_AARCH64
+TARGET_FILES= \
+	aarch64/signal_stubs.S \
+	aarch64/compat.c \
+	math/isinf.c \
+	math/isnan.c
+endif
 
 LIB_FILES= \
 	lib/_cygwin_crt0_common.cc \
@@ -151,6 +158,11 @@ LIBC_FILES= \
 	libc/tss.c \
 	libc/xsique.cc
 
+if TARGET_AARCH64
+# These overrides are x87 implementations.  ARM64 resolves the same public
+# math entry points from newlib/libm until native optimized variants exist.
+MATH_FILES=
+else
 MATH_FILES= \
 	math/acoshl.c \
 	math/acosl.c \
@@ -246,6 +258,7 @@ MATH_FILES= \
 	math/tanl.S \
 	math/tgammal.c \
 	math/truncl.c
+endif
 
 MM_FILES = \
 	mm/cygheap.cc \
@@ -606,8 +619,23 @@ $(LDSCRIPT): $(LDSCRIPT).in
 
 # msys-2.0 dll
 # Set PE and export table header timestamps to zero for reproducible builds.
+ARM64_WINDOWS_LIBDIR ?= $(tooldir)/lib/w32api
+ARM64_RUNTIME_LIBS ?= -lgcc
 $(NEW_DLL_NAME): $(LDSCRIPT) libdll.a $(VERSION_OFILES) $(LIBSERVER)\
 		  $(newlib_build)/libm.a $(newlib_build)/libc.a
+if TARGET_AARCH64
+	$(AM_V_CXXLD)$(LD) --gc-sections -T$(LDSCRIPT) \
+	$${SOURCE_DATE_EPOCH:+--no-insert-timestamp} --heap=0 \
+	--out-implib msysdll.a --shared -o $@ \
+	-e @DLL_ENTRY@ $(DEF_FILE) \
+	--whole-archive libdll.a --no-whole-archive \
+	$(VERSION_OFILES) $(LIBSERVER) \
+	$(newlib_build)/libm.a $(newlib_build)/libc.a \
+	--whole-archive $(word 1,$(ARM64_RUNTIME_LIBS)) --no-whole-archive \
+	$(wordlist 2,999,$(ARM64_RUNTIME_LIBS)) \
+	-L$(ARM64_WINDOWS_LIBDIR) \
+	-lkernel32 -lntdll -lntdllcrt -Map msys.map
+else
 	$(AM_V_CXXLD)$(CXX) $(CXXFLAGS) \
 	-mno-use-libstdc-wrappers \
 	-Wl,--gc-sections -nostdlib -Wl,-T$(LDSCRIPT) -static \
@@ -620,6 +648,7 @@ $(NEW_DLL_NAME): $(LDSCRIPT) libdll.a $(VERSION_OFILES) $(LIBSERVER)\
 	$(newlib_build)/libm.a \
 	$(newlib_build)/libc.a \
 	-lgcc -lkernel32 -lntdll -Wl,-Map,msys.map
+endif
 	@$(MKDIR_P) ${target_builddir}/winsup/testsuite/testinst/bin/
 	$(AM_V_at)$(INSTALL_PROGRAM) $(NEW_DLL_NAME) ${target_builddir}/winsup/testsuite/testinst/bin/$(DLL_NAME)
 
