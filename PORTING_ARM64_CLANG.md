@@ -2,6 +2,12 @@
 
 Target: native Windows ARM64 (`aarch64-pc-msys`) using LLVM-MinGW Clang.
 
+The ARM64 runtime foundation comes from the
+[Windows-on-ARM-Experiments](https://github.com/Windows-on-ARM-Experiments)
+Cygwin work. This branch adapts that direction to the MSYS2/Clang build and
+records reproducible validation in a Windows 11 ARM64 QEMU VM. Its primary
+result is the tested QEMU path, not an independently completed runtime port.
+
 ## Bootstrap order
 
 1. Build GNU binutils for `aarch64-w64-mingw32`.
