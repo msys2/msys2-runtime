@@ -22,6 +22,12 @@ endif
 
 if BUILD_UTILS
 SUBDIRS += utils
+else
+# Enter utils/ for the MinGW host-tool subset even when the cygwin-linked utils
+# are disabled (--enable-mingw-utils; utils/Makefile.am descends only into mingw).
+if BUILD_MINGW_UTILS
+SUBDIRS += utils
+endif
 endif
 
 if BUILD_DOC
@@ -36,4 +42,8 @@ endif
 
 if BUILD_UTILS
 utils: cygwin
+else
+if BUILD_MINGW_UTILS
+utils: cygwin
+endif
 endif
