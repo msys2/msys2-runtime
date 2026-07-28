@@ -69,7 +69,7 @@ kill_via_console_helper (HANDLE process, wchar_t *function_name, int exit_code,
     case IMAGE_FILE_MACHINE_AMD64:
       name = "/usr/libexec/getprocaddr64.exe";
       break;
-    /* TODO: provide exes for these */
+    /* TODO: provide a getprocaddrarm32.exe for ARMNT targets */
     case IMAGE_FILE_MACHINE_ARMNT:
       name = "/usr/libexec/getprocaddrarm32.exe";
       break;
