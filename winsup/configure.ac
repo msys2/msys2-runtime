@@ -147,6 +147,13 @@ if test "x$with_cross_bootstrap" != "xyes"; then
 fi
 AM_CONDITIONAL(CROSS_BOOTSTRAP, [test "x$with_cross_bootstrap" != "xyes"])
 
+# Optional aarch64 MinGW compiler (present only on Windows-on-ARM hosts).
+# When available, build getprocaddrarm64 for gentle kill of native ARM64
+# processes; probed even under --with-cross-bootstrap and not an error when
+# missing, so x86 hosts are unaffected.
+AC_CHECK_PROGS(MINGWARM64_CC, aarch64-w64-mingw32-gcc)
+AM_CONDITIONAL(HAVE_MINGWARM64_CC, [test -n "$MINGWARM64_CC"])
+
 AC_EXEEXT
 
 AC_ARG_ENABLE([dumper],

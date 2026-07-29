@@ -27,6 +27,9 @@ bin_PROGRAMS = \
 	strace
 
 libexec_PROGRAMS = getprocaddr32 getprocaddr64
+if HAVE_MINGWARM64_CC
+libexec_PROGRAMS += getprocaddrarm64
+endif
 
 # Must *not* use -O2 here, as it screws up the stack backtrace
 getprocaddr32.o: %32.o: %.c
@@ -40,6 +43,14 @@ getprocaddr64.o: %64.o: %.c
 
 getprocaddr64.exe: %.exe: %.o
 	$(MINGW64_CC) -o $@ $^ -static -ldbghelp
+
+# Native ARM64 helper for gentle kill of PID_NOTCYGWIN processes; only built
+# when the aarch64 MinGW compiler is present (HAVE_MINGWARM64_CC).
+getprocaddrarm64.o: %arm64.o: %.c
+	$(MINGWARM64_CC) -c -o $@ $<
+
+getprocaddrarm64.exe: %.exe: %.o
+	$(MINGWARM64_CC) -o $@ $^ -static -ldbghelp
 
 cygcheck_SOURCES = \
 	bloda.cc \
