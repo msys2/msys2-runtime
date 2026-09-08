@@ -399,7 +399,7 @@ skip_p2w:
     }
     it = *src;
 
-    while (!isalnum(*it) && *it != '/' && *it != '\\' && *it != ':' && *it != '-' && *it != '.') {
+    while (!isalnum(*it) && !(0x80 & *it) && *it != '/' && *it != '\\' && *it != ':' && *it != '-' && *it != '.') {
         recurse = true;
         it = ++*src;
         if (it == end || *it == '\0') return NONE;
