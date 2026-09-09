@@ -14,10 +14,36 @@ cygdoc_DATA = \
 	CYGWIN_LICENSE \
 	COPYING
 
-SUBDIRS = cygwin cygserver utils testsuite
+SUBDIRS = cygwin testsuite
+
+if BUILD_CYGSERVER
+SUBDIRS += cygserver
+endif
+
+if BUILD_UTILS
+SUBDIRS += utils
+else
+# Enter utils/ for the MinGW host-tool subset even when the cygwin-linked utils
+# are disabled (--enable-mingw-utils; utils/Makefile.am descends only into mingw).
+if BUILD_MINGW_UTILS
+SUBDIRS += utils
+endif
+endif
 
 if BUILD_DOC
 SUBDIRS += doc
 endif
 
-cygserver utils testsuite: cygwin
+testsuite: cygwin
+
+if BUILD_CYGSERVER
+cygserver: cygwin
+endif
+
+if BUILD_UTILS
+utils: cygwin
+else
+if BUILD_MINGW_UTILS
+utils: cygwin
+endif
+endif
