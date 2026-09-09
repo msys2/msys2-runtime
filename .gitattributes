@@ -18,3 +18,4 @@
 #     file gets renamed again ...
 
 ChangeLog       merge=merge-changelog
+*.sh eol=lf
