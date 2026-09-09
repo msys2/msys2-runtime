@@ -162,9 +162,18 @@ quoted (char *cmd, int winshell, int glob)
   if (!winshell || !glob)
     {
       char *p;
-      strcpy (cmd, cmd + 1);
+      /* These two copies delete a quote in place, so source and destination
+	 overlap.  strcpy is undefined for overlapping buffers: it only happens
+	 to work for dst < src when the implementation copies one byte at a
+	 time.  The AArch64 strcpy is SIMD -- it rounds the source pointer down
+	 to a 16-byte boundary and loads the whole block, so storing it back
+	 one byte lower duplicates bytes within the block while preserving the
+	 total length.  The result is a mangled command line whenever a native
+	 (non-Cygwin) parent such as cmd.exe launches us.  memmove is defined
+	 for overlap and is the correct call in both places.  */
+      memmove (cmd, cmd + 1, strlen (cmd + 1) + 1);
       if (*(p = strchrnul (cmd, quote)))
-	strcpy (p, p + 1);
+	memmove (p, p + 1, strlen (p + 1) + 1);
       return p;
     }
 
