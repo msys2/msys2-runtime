@@ -2160,7 +2160,7 @@ class dev_console
   int num_processed; /* Number of input events in the current input buffer
 			already processed by cons_master_thread(). */
   bool need_win32_input_mode_fix;
-  bool is_processed_input;
+  volatile bool is_processed_input;
 
   inline UINT get_console_cp ();
   DWORD con_to_str (char *d, int dlen, WCHAR w);
@@ -2364,6 +2364,7 @@ private:
   static void cleanup_for_non_cygwin_app (handle_set_t *p);
   static void set_console_mode_to_native ();
   bool need_console_handler ();
+  static bool master_thread_unavailable (_minor_t unit);
   static void set_disable_master_thread (bool x, fhandler_console *cons = NULL);
   static DWORD attach_console (DWORD, bool *err = NULL);
   static void detach_console (DWORD, DWORD);
