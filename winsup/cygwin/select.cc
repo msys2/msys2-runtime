@@ -1154,23 +1154,23 @@ peek_console (select_record *me, bool)
   HANDLE h;
   set_handle_or_return_if_not_open (h, me);
 
-  fh->acquire_input_mutex (mutex_timeout);
   while (!fh->input_ready && !fh->get_cons_readahead_valid ())
     {
       if (fh->bg_check (SIGTTIN, true) <= bg_eof)
-	{
-	  fh->release_input_mutex ();
-	  return me->read_ready = true;
-	}
+	return me->read_ready = true;
       else
 	{
+	  fh->acquire_input_mutex (mutex_timeout);
 	  acquire_attach_mutex (mutex_timeout);
 	  DWORD resume_pid = fh->attach_console (fh->get_owner ());
 	  BOOL r = PeekConsoleInputW (h, &irec, 1, &events_read);
 	  fh->detach_console (resume_pid, fh->get_owner ());
 	  release_attach_mutex ();
 	  if (!r || !events_read)
-	    break;
+	    {
+	      fh->release_input_mutex ();
+	      break;
+	    }
 	}
       if (fhandler_console::input_winch == fh->process_input_message (0)
 	  && global_sigs[SIGWINCH].sa_handler != SIG_IGN
@@ -1180,8 +1180,10 @@ peek_console (select_record *me, bool)
 	  fh->release_input_mutex ();
 	  return -1;
 	}
+      fh->release_input_mutex ();
+
+      fh->fix_input_mode_if_necessary (); /* for win32_input_mode */
     }
-  fh->release_input_mutex ();
   if (fh->input_ready || fh->get_cons_readahead_valid ())
     return me->read_ready = true;
 
