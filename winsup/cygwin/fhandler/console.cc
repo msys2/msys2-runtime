@@ -2086,6 +2086,26 @@ fhandler_console::open (int flags, mode_t)
   if (in_is_console)
     CloseHandle (h_in);
 
+  /* Another process may hold cons_mode_mutex while waiting for the
+     master thread to acknowledge a state change. */
+  if (GetCurrentProcessId () == con.owner)
+    {
+      if (GetModuleHandle ("ConEmuHk64.dll"))
+	hook_conemu_cygwin_connector ();
+      char name[MAX_PATH];
+      shared_name (name, CONS_THREAD_SYNC, get_minor ());
+      thread_sync_event = CreateEvent(NULL, FALSE, FALSE, name);
+      if (thread_sync_event)
+	{
+	  new cygthread (::cons_master_thread, this, "consm");
+	  WaitForSingleObject (thread_sync_event, INFINITE);
+	  CloseHandle (thread_sync_event);
+	}
+      else
+	debug_printf ("Failed to create thread_sync_event %08x",
+		      GetLastError ());
+    }
+
   WaitForSingleObject (cons_mode_mutex, mutex_timeout);
   if (in_is_console && con.curr_input_mode != tty::cygwin)
     {
@@ -2104,23 +2124,6 @@ fhandler_console::open (int flags, mode_t)
   debug_printf ("opened conin$ %p, conout$ %p", get_handle (),
 		get_output_handle ());
 
-  if (GetCurrentProcessId () == con.owner)
-    {
-      if (GetModuleHandle ("ConEmuHk64.dll"))
-	hook_conemu_cygwin_connector ();
-      char name[MAX_PATH];
-      shared_name (name, CONS_THREAD_SYNC, get_minor ());
-      thread_sync_event = CreateEvent(NULL, FALSE, FALSE, name);
-      if (thread_sync_event)
-	{
-	  new cygthread (::cons_master_thread, this, "consm");
-	  WaitForSingleObject (thread_sync_event, INFINITE);
-	  CloseHandle (thread_sync_event);
-	}
-      else
-	debug_printf ("Failed to create thread_sync_event %08x",
-		      GetLastError ());
-    }
   return 1;
 }
 
@@ -4938,7 +4941,15 @@ fhandler_console::set_disable_master_thread (bool x, fhandler_console *cons)
   con.disable_master_thread = x;
   cons->release_input_mutex ();
   while (con.master_thread_suspended != x)
-    Sleep (1);
+    {
+      DWORD owner = con.owner;
+      /* Keep the request for a replacement worker, but do not wait for a
+	 dead owner.  -1 denotes an owner completing normal retirement. */
+      if (owner != (DWORD) -1 && !process_alive (owner)
+	  && con.owner == owner)
+	break;
+      Sleep (1);
+    }
 }
 
 int
