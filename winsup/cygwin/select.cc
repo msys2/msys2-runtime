@@ -1172,17 +1172,17 @@ peek_console (select_record *me, bool)
 	      break;
 	    }
 	}
-      if (fhandler_console::input_winch == fh->process_input_message (0)
+      int ret = fh->process_input_message (0);
+      fh->release_input_mutex ();
+      fh->fix_input_mode_if_necessary (); /* for win32_input_mode */
+
+      if (fhandler_console::input_winch == ret
 	  && global_sigs[SIGWINCH].sa_handler != SIG_IGN
 	  && global_sigs[SIGWINCH].sa_handler != SIG_DFL)
 	{
 	  set_sig_errno (EINTR);
-	  fh->release_input_mutex ();
 	  return -1;
 	}
-      fh->release_input_mutex ();
-
-      fh->fix_input_mode_if_necessary (); /* for win32_input_mode */
     }
   if (fh->input_ready || fh->get_cons_readahead_valid ())
     return me->read_ready = true;

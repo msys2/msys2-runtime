@@ -1369,6 +1369,7 @@ wait_retry:
 	case input_signalled: /* signalled */
 	case input_winch:
 	  release_input_mutex ();
+	  fix_input_mode_if_necessary (); /* for win32_input_mode */
 	  if (global_sigs[get_ttyp ()->last_sig].sa_flags & SA_RESTART)
 	    continue;
 	  goto sig_exit;
@@ -1390,13 +1391,13 @@ wait_retry:
     input_ready = false;
   release_input_mutex ();
 
+  fix_input_mode_if_necessary (); /* for win32_input_mode */
+
   if (buflen > copied_chars && !(get_ttyp ()->ti.c_lflag & ICANON)
       && copied_chars < get_ttyp ()->ti.c_cc[VMIN])
     goto read_more;
 
 #undef buf
-
-  fix_input_mode_if_necessary (); /* for win32_input_mode */
 
   buflen = copied_chars;
   return;
