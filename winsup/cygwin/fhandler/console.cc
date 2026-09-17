@@ -4950,7 +4950,18 @@ fhandler_console::set_disable_master_thread (bool x, fhandler_console *cons)
   con.disable_master_thread = x;
   cons->release_input_mutex ();
   while (con.master_thread_suspended != x)
-    Sleep (1);
+    { /* Wait for the responce from the cons_master_thread. */
+      DWORD owner = con.owner;
+      if (owner == 0 || owner == (DWORD) -1 || !process_alive (owner))
+	{ /* The process that runs cons_master_thread no longer exists. */
+	  cons->acquire_input_mutex (mutex_timeout);
+	  /* Treat the absence of the master_thread the same as suspension. */
+	  con.master_thread_suspended = true;
+	  cons->release_input_mutex ();
+	  return; /* Abort */
+	}
+      Sleep (1);
+    }
 }
 
 int
