@@ -607,6 +607,14 @@ child_info_spawn::worker (const char *prog_arg, const char *const *argv,
 			 PROCESS_QUERY_LIMITED_INFORMATION))
 	sa = &sec_none_nih;
 
+      if (!real_path.iscygexec () && mode == _P_OVERLAY)
+	{
+	  LONG pidflags = PID_NOTCYGWIN;
+	  if (c_flags & CREATE_NEW_PROCESS_GROUP)
+	    pidflags |= PID_NEW_PG;
+	  InterlockedOr ((LONG *) &myself->process_state, pidflags);
+	}
+
       int fileno_stdin = in__stdin < 0 ? 0 : in__stdin;
       int fileno_stdout = in__stdout < 0 ? 1 : in__stdout;
       int fileno_stderr = 2;
@@ -633,14 +641,6 @@ child_info_spawn::worker (const char *prog_arg, const char *const *argv,
 	 FIXME: If ruid != euid and ruid != saved_uid we currently give
 	 up on ruid. The new process will have ruid == euid. */
       ::cygheap->user.deimpersonate ();
-
-      if (!real_path.iscygexec () && mode == _P_OVERLAY)
-	{
-	  LONG pidflags = PID_NOTCYGWIN;
-	  if (c_flags & CREATE_NEW_PROCESS_GROUP)
-	    pidflags |= PID_NEW_PG;
-	  InterlockedOr ((LONG *) &myself->process_state, pidflags);
-	}
 
       cygpid = (mode != _P_OVERLAY) ? create_cygwin_pid () : myself->pid;
 
@@ -783,6 +783,18 @@ child_info_spawn::worker (const char *prog_arg, const char *const *argv,
       /* Name the handle similarly to proc_subproc. */
       ProtectHandle1 (pi.hProcess, childhProc);
 
+      /* Start the child running for non-cygwin process*/
+      if (!iscygwin () && (c_flags & CREATE_SUSPENDED))
+	{
+	  /* Inject a non-inheritable wr_proc_pipe handle into child so that we
+	     can accurately track when the child exits without keeping this
+	     process waiting around for it to exit.  */
+	  DuplicateHandle (GetCurrentProcess (), wr_proc_pipe, pi.hProcess,
+			   NULL, 0, false, DUPLICATE_SAME_ACCESS);
+	  ResumeThread (pi.hThread);
+	  term_spawn_worker.wait_for_resume_if_necessary (real_path, pi);
+	}
+
       if (mode == _P_OVERLAY)
 	{
 	  myself->dwProcessId = pi.dwProcessId;
@@ -856,18 +868,11 @@ child_info_spawn::worker (const char *prog_arg, const char *const *argv,
 	    }
 	}
 
-      /* Start the child running */
-      if (c_flags & CREATE_SUSPENDED)
+      /* Start the child running for cygwin process*/
+      if (iscygwin () && (c_flags & CREATE_SUSPENDED))
 	{
-	  /* Inject a non-inheritable wr_proc_pipe handle into child so that we
-	     can accurately track when the child exits without keeping this
-	     process waiting around for it to exit.  */
-	  if (!iscygwin ())
-	    DuplicateHandle (GetCurrentProcess (), wr_proc_pipe, pi.hProcess, NULL,
-			     0, false, DUPLICATE_SAME_ACCESS);
 	  ResumeThread (pi.hThread);
-	  if (iscygwin ())
-	    strace.write_childpid (pi.dwProcessId);
+	  strace.write_childpid (pi.dwProcessId);
 	}
       ForceCloseHandle (pi.hThread);
 
@@ -914,7 +919,6 @@ child_info_spawn::worker (const char *prog_arg, const char *const *argv,
 		prev_sigExeced =
 		  InterlockedCompareExchange (&sigExeced, 0, prev_sigExeced);
 	      term_spawn_worker.cleanup ();
-	      term_spawn_worker.close_handle_set ();
 	    }
 	  /* Make sure that ctrl_c_handler() is not on going. Calling
 	     init_console_handler(false) locks until returning from
@@ -952,7 +956,7 @@ child_info_spawn::worker (const char *prog_arg, const char *const *argv,
       res = -1;
     }
   __endtry
-  term_spawn_worker.close_handle_set ();
+  term_spawn_worker.cleanup ();
   this->cleanup ();
   if (envblock)
     free (envblock);
