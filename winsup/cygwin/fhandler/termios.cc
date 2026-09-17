@@ -830,20 +830,37 @@ void
 fhandler_termios::spawn_worker::cleanup ()
 {
   if (ptys_need_cleanup)
-    fhandler_pty_slave::cleanup_for_non_cygwin_app (&ptys_handle_set,
-						    ptys_ttyp, stdin_is_ptys);
+    {
+      fhandler_pty_slave::cleanup_for_non_cygwin_app (&ptys_handle_set,
+						      ptys_ttyp, stdin_is_ptys);
+      fhandler_pty_slave::close_handle_set (&ptys_handle_set);
+      ptys_need_cleanup = false;
+    }
   if (cons_need_cleanup)
-    fhandler_console::cleanup_for_non_cygwin_app (&cons_handle_set);
-  close_handle_set ();
+    {
+      fhandler_console::cleanup_for_non_cygwin_app (&cons_handle_set);
+      fhandler_console::close_handle_set (&cons_handle_set);
+      cons_need_cleanup = false;
+    }
+}
+
+bool
+fhandler_termios::spawn_worker::is_attaching (DWORD pid)
+{
+  return !!fhandler_termios::get_console_process_id (pid, true);
 }
 
 void
-fhandler_termios::spawn_worker::close_handle_set ()
+fhandler_termios::spawn_worker::wait_for_resume_if_necessary
+			      (path_conv &pc, PROCESS_INFORMATION &pi)
 {
-  if (ptys_need_cleanup)
-    fhandler_pty_slave::close_handle_set (&ptys_handle_set);
-  if (cons_need_cleanup)
-    fhandler_console::close_handle_set (&cons_handle_set);
+  if (is_attaching (myself->dwProcessId) && is_console_app (pc))
+    {
+      DWORD t0 = GetTickCount ();
+      while (GetTickCount () - t0 < 40 && !is_attaching (pi.dwProcessId)
+	     && WaitForSingleObject (pi.hProcess, 0) == WAIT_TIMEOUT)
+	Sleep (1);
+    }
 }
 
 void
@@ -916,7 +933,10 @@ fhandler_termios::get_console_process_id (DWORD pid, bool match,
 	  }
 	else
 	  {
-	    pinfo p (cygwin_pid (list[i]));
+	    pid_t cygpid = cygwin_pid (list[i]);
+	    if (cygpid == 0)
+	      continue;
+	    pinfo p (cygpid);
 	    if (nat && !!p && !ISSTATE(p, PID_NOTCYGWIN))
 	      continue;
 	    if (!!p && p->exec_dwProcessId)
