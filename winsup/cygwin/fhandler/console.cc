@@ -4950,16 +4950,40 @@ fhandler_console::set_disable_master_thread (bool x, fhandler_console *cons)
   cons->acquire_input_mutex (mutex_timeout);
   con.disable_master_thread = x;
   cons->release_input_mutex ();
+  DWORD reported_owner = 0;
   while (con.master_thread_suspended != x)
-    { /* Wait for the responce from the cons_master_thread. */
+    {
       DWORD owner = con.owner;
-      if (owner == 0 || owner == (DWORD) -1 || !process_alive (owner))
-	{ /* The process that runs cons_master_thread no longer exists. */
-	  cons->acquire_input_mutex (mutex_timeout);
-	  /* Treat the absence of the master_thread the same as suspension. */
-	  con.master_thread_suspended = true;
-	  cons->release_input_mutex ();
-	  return; /* Abort */
+      if (owner != (DWORD) -1)
+	{
+	  bool exited = owner == 0;
+	  DWORD error = ERROR_SUCCESS;
+	  if (owner)
+	    {
+	      HANDLE process = OpenProcess (SYNCHRONIZE, FALSE, owner);
+	      if (process)
+		{
+		  DWORD res = WaitForSingleObject (process, 0);
+		  if (res == WAIT_FAILED)
+		    error = GetLastError ();
+		  exited = res == WAIT_OBJECT_0;
+		  CloseHandle (process);
+		}
+	      else
+		{
+		  error = GetLastError ();
+		  exited = error == ERROR_INVALID_PARAMETER;
+		}
+	    }
+	  /* Keep the request, but never invent a worker acknowledgement. */
+	  if (exited && con.owner == owner)
+	    return;
+	  if (error && !exited && reported_owner != owner)
+	    {
+	      system_printf ("Cannot query console owner %u, error %u",
+			     owner, error);
+	      reported_owner = owner;
+	    }
 	}
       Sleep (1);
     }
