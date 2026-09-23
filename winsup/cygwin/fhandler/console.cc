@@ -858,7 +858,7 @@ fhandler_console::fix_input_mode_if_necessary ()
     }
   bool need_processed_input =
     con.master_thread_suspended || con.disable_master_thread
-    || con.need_win32_input_mode_fix;
+    || con.need_win32_input_mode_fix || master_thread_unavailable (unit);
   if (need_processed_input == con.is_processed_input)
     {
       ReleaseMutex (cons_mode_mutex);
@@ -873,8 +873,11 @@ fhandler_console::fix_input_mode_if_necessary ()
     flags |= ENABLE_PROCESSED_INPUT;
   else
     flags &= ~ENABLE_PROCESSED_INPUT;
-  con.is_processed_input = need_processed_input;
+  if (need_processed_input)
+    con.is_processed_input = true;
   SetConsoleMode (get_handle (), flags);
+  if (!need_processed_input)
+    con.is_processed_input = false;
   detach_console (resume_pid, con.owner);
   release_attach_mutex ();
   ReleaseMutex (input_mutex);
@@ -889,6 +892,7 @@ fhandler_console::set_input_mode (tty::cons_mode m, const termios *t,
 {
   const _minor_t unit = p->unit;
   DWORD oflags;
+  bool need_processed_input = false;
   WaitForSingleObject (p->input_mutex, mutex_timeout);
   acquire_attach_mutex (mutex_timeout);
   DWORD resume_pid = attach_console (con.owner);
@@ -903,10 +907,10 @@ fhandler_console::set_input_mode (tty::cons_mode m, const termios *t,
       break;
     case tty::cygwin:
       flags |= ENABLE_WINDOW_INPUT;
-      con.is_processed_input =
+      need_processed_input =
 	con.master_thread_suspended || con.disable_master_thread
-	|| con.need_win32_input_mode_fix;
-      if (con.is_processed_input)
+	|| con.need_win32_input_mode_fix || master_thread_unavailable (unit);
+      if (need_processed_input)
 	flags |= ENABLE_PROCESSED_INPUT;
       if (wincap.has_con_24bit_colors () && !con_is_legacy)
 	flags |= ENABLE_VIRTUAL_TERMINAL_INPUT;
@@ -927,8 +931,11 @@ fhandler_console::set_input_mode (tty::cons_mode m, const termios *t,
       break;
     }
   con.curr_input_mode = m;
+  if (flags & ENABLE_PROCESSED_INPUT)
+    con.is_processed_input = true;
   SetConsoleMode (p->input_handle, flags);
-  con.is_processed_input = (flags & ENABLE_PROCESSED_INPUT) != 0;
+  if (!(flags & ENABLE_PROCESSED_INPUT))
+    con.is_processed_input = false;
   if (!(oflags & ENABLE_VIRTUAL_TERMINAL_INPUT)
       && (flags & ENABLE_VIRTUAL_TERMINAL_INPUT)
       && con.cursor_key_app_mode)
@@ -4933,7 +4940,37 @@ fhandler_console::close_handle_set (handle_set_t *p)
 bool
 fhandler_console::need_console_handler ()
 {
-  return con.disable_master_thread || con.master_thread_suspended;
+  return con.is_processed_input;
+}
+
+bool
+fhandler_console::master_thread_unavailable (_minor_t unit)
+{
+  DWORD owner = con.owner;
+  if (owner == (DWORD) -1) /* About to exit, however still alive */
+    return false;
+  if (owner == 0)
+    return true;
+  bool exited = false;
+  DWORD error = ERROR_SUCCESS;
+  HANDLE process = OpenProcess (SYNCHRONIZE, FALSE, owner);
+  if (process)
+    {
+      DWORD res = WaitForSingleObject (process, 0);
+      if (res == WAIT_FAILED)
+	error = GetLastError ();
+      exited = (res == WAIT_OBJECT_0);
+      CloseHandle (process);
+    }
+  else
+    {
+      error = GetLastError ();
+      exited = (error == ERROR_INVALID_PARAMETER);
+    }
+  if (error && !exited)
+    system_printf ("Cannot query console owner %u, error %u", owner, error);
+
+  return (exited || error) && con.owner == owner;
 }
 
 void
@@ -4951,7 +4988,11 @@ fhandler_console::set_disable_master_thread (bool x, fhandler_console *cons)
   con.disable_master_thread = x;
   cons->release_input_mutex ();
   while (con.master_thread_suspended != x)
-    Sleep (1);
+    { /* Wait for the responce from the cons_master_thread. */
+      if (master_thread_unavailable (unit))
+	return; /* Abort */
+      Sleep (1);
+    }
 }
 
 int
