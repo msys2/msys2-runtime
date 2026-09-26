@@ -92,6 +92,8 @@ set_winsymlinks (const char *buf)
 			? WSYM_nativestrict : WSYM_native;
   else if (ascii_strncasematch (buf, "deepcopy", 8))
     allow_winsymlinks = WSYM_deepcopy;
+  else if (ascii_strncasematch (buf, "nativeordeepcopy", 8))
+    allow_winsymlinks = WSYM_native_or_deepcopy;
   else
     allow_winsymlinks = WSYM_sysfile;
 }

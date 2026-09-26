@@ -57,7 +57,8 @@ enum winsym_t
   WSYM_nativestrict,
   WSYM_nfs,
   WSYM_sysfile,
-  WSYM_deepcopy
+  WSYM_deepcopy,
+  WSYM_native_or_deepcopy
 };
 
 exit_states NO_COPY exit_state;
