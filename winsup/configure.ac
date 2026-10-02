@@ -57,6 +57,40 @@ AC_CHECK_TOOL(RANLIB, ranlib, ranlib)
 AC_CHECK_TOOL(STRIP, strip, strip)
 AC_CHECK_TOOL(WINDRES, windres, windres)
 
+# Record msys2-runtime commit
+AC_ARG_WITH([msys2-runtime-commit],
+  [AS_HELP_STRING([--with-msys2-runtime-commit=COMMIT],
+		  [indicate the msys2-runtime commit corresponding to this build])],
+  [MSYS2_RUNTIME_COMMIT=$withval], [MSYS2_RUNTIME_COMMIT=yes])
+case "$MSYS2_RUNTIME_COMMIT" in
+no)
+    MSYS2_RUNTIME_COMMIT=
+    MSYS2_RUNTIME_COMMIT_SHORT=
+    MSYS2_RUNTIME_COMMIT_HEX=0
+    ;;
+yes|auto)
+    if MSYS2_RUNTIME_COMMIT="$(git --git-dir="$srcdir/../.git" rev-parse HEAD)"
+    then
+        MSYS2_RUNTIME_COMMIT_SHORT="$(expr "$MSYS2_RUNTIME_COMMIT" : '\(.\{,8\}\)')"
+        MSYS2_RUNTIME_COMMIT_HEX="0x${MSYS2_RUNTIME_COMMIT_SHORT}ul"
+    else
+        AC_MSG_WARN([Could not determine msys2-runtime commit])
+        MSYS2_RUNTIME_COMMIT=
+        MSYS2_RUNTIME_COMMIT_SHORT=
+        MSYS2_RUNTIME_COMMIT_HEX=0
+    fi
+    ;;
+*)
+    expr "$MSYS2_RUNTIME_COMMIT" : '@<:@0-9a-f@:>@\{6,64\}$' ||
+    AC_MSG_ERROR([Invalid commit name: "$MSYS2_RUNTIME_COMMIT"])
+    MSYS2_RUNTIME_COMMIT_SHORT="$(expr "$MSYS2_RUNTIME_COMMIT" : '\(.\{,8\}\)')"
+    MSYS2_RUNTIME_COMMIT_HEX="0x${MSYS2_RUNTIME_COMMIT_SHORT}ul"
+    ;;
+esac
+AC_SUBST(MSYS2_RUNTIME_COMMIT)
+AC_SUBST(MSYS2_RUNTIME_COMMIT_SHORT)
+AC_SUBST(MSYS2_RUNTIME_COMMIT_HEX)
+
 AC_ARG_ENABLE(debugging,
 [AS_HELP_STRING([--enable-debugging],[Build a cygwin DLL which has more consistency checking for debugging])],
 [case "${enableval}" in
@@ -84,11 +118,10 @@ AM_CONDITIONAL(BUILD_DOC, [test $enable_doc != "no"])
 AC_CHECK_PROGS([DOCBOOK2XTEXI], [docbook2x-texi db2x_docbook2texi])
 if test -z "$DOCBOOK2XTEXI" ; then
     if test "x$enable_doc" != "xno"; then
-        AC_MSG_ERROR([docbook2texi is required to build documentation])
-    else
-        unset DOCBOOK2XTEXI
-        AM_MISSING_PROG([DOCBOOK2XTEXI], [docbook2texi])
+        AC_MSG_WARN([docbook2texi is required to build documentation])
     fi
+    unset DOCBOOK2XTEXI
+    AM_MISSING_PROG([DOCBOOK2XTEXI], [docbook2texi])
 fi
 
 AC_CHECK_PROGS([XMLTO], [xmlto])
@@ -106,6 +139,11 @@ if test "x$with_cross_bootstrap" != "xyes"; then
     test -n "$MINGW_CXX" || AC_MSG_ERROR([no acceptable MinGW g++ found in \$PATH])
     AC_CHECK_PROGS(MINGW_CC, ${target_cpu}-w64-mingw32-gcc)
     test -n "$MINGW_CC" || AC_MSG_ERROR([no acceptable MinGW gcc found in \$PATH])
+
+    AC_CHECK_PROGS(MINGW32_CC, i686-w64-mingw32-gcc)
+    test -n "$MINGW32_CC" || AC_MSG_ERROR([no acceptable mingw32 gcc found in \$PATH])
+    AC_CHECK_PROGS(MINGW64_CC, x86_64-w64-mingw32-gcc)
+    test -n "$MINGW64_CC" || AC_MSG_ERROR([no acceptable mingw64 gcc found in \$PATH])
 fi
 AM_CONDITIONAL(CROSS_BOOTSTRAP, [test "x$with_cross_bootstrap" != "xyes"])
 

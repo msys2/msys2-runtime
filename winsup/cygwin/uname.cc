@@ -24,6 +24,24 @@ extern "C" int getdomainname (char *__name, size_t __len);
 #define ATTRIBUTE_NONSTRING
 #endif
 
+static const char*
+get_sysname()
+{
+#ifdef __MSYS__
+  char* msystem = getenv("MSYSTEM");
+  if (!msystem || strcmp(msystem, "MSYS") == 0)
+    return "MSYS";
+  else if (strcmp(msystem, "CYGWIN") == 0)
+    return "CYGWIN";
+  else if (strstr(msystem, "32") != NULL)
+    return "MINGW32";
+  else
+    return "MINGW64";
+#else
+  return "CYGWIN";
+#endif
+}
+
 /* uname: POSIX 4.4.1.1 */
 
 /* New entrypoint for applications since API 335 */
@@ -37,7 +55,9 @@ uname_x (struct utsname *name)
 
       memset (name, 0, sizeof (*name));
       /* sysname */
-      n = __small_sprintf (name->sysname, "CYGWIN_%s-%u",
+      const char* sysname = get_sysname();
+      n = __small_sprintf (name->sysname, "%s_%s-%u",
+			   sysname,
 			   wincap.osname (), wincap.build_number ());
       if (wincap.host_machine () != wincap.cygwin_machine ())
 	{
@@ -71,18 +91,19 @@ uname_x (struct utsname *name)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-truncation="
 #ifdef CYGPORT_RELEASE_INFO
-      snprintf (name->release, _UTSNAME_LENGTH, "%s.%s",
-		__XSTRING (CYGPORT_RELEASE_INFO), name->machine);
+      snprintf (name->release, _UTSNAME_LENGTH, "%s-%s.%s",
+		__XSTRING (CYGPORT_RELEASE_INFO), MSYS2_RUNTIME_COMMIT_SHORT, name->machine);
 #else
       extern const char *uname_dev_version;
       if (uname_dev_version && uname_dev_version[0])
-	snprintf (name->release, _UTSNAME_LENGTH, "%s.%s",
-		  uname_dev_version, name->machine);
+	snprintf (name->release, _UTSNAME_LENGTH, "%s-%s.%s",
+		  uname_dev_version, MSYS2_RUNTIME_COMMIT_SHORT, name->machine);
       else
-	__small_sprintf (name->release, "%d.%d.%d-api-%d.%s",
+	__small_sprintf (name->release, "%d.%d.%d-%s-api-%d.%s",
 			 cygwin_version.dll_major / 1000,
 			 cygwin_version.dll_major % 1000,
 			 cygwin_version.dll_minor,
+			 MSYS2_RUNTIME_COMMIT_SHORT,
 			 cygwin_version.api_minor,
 			 name->machine);
 #endif
@@ -104,7 +125,7 @@ uname_x (struct utsname *name)
 /* Old entrypoint for applications up to API 334 */
 struct old_utsname
 {
-  char sysname[20];
+  char sysname[21];
   char nodename[20];
   char release[20];
   char version[20];
@@ -118,20 +139,22 @@ uname (struct utsname *in_name)
   __try
     {
       memset (name, 0, sizeof (*name));
-      __small_sprintf (name->sysname, "CYGWIN_%s", wincap.osname ());
+      const char* sysname = get_sysname();
+      __small_sprintf (name->sysname, "%s_%s", sysname, wincap.osname ());
 
       /* Computer name */
       cygwin_gethostname (name->nodename, sizeof (name->nodename) - 1);
 
       /* Cygwin dll release */
-      __small_sprintf (name->release, "%d.%d.%d(%d.%d/%d/%d)",
+      __small_sprintf (name->release, "%d.%d.%d(%d.%d/%d/%d/%s)",
 		       cygwin_version.dll_major / 1000,
 		       cygwin_version.dll_major % 1000,
 		       cygwin_version.dll_minor,
 		       cygwin_version.api_major,
 		       cygwin_version.api_minor,
 		       cygwin_version.shared_data,
-		       cygwin_version.mount_registry);
+		       cygwin_version.mount_registry,
+		       MSYS2_RUNTIME_COMMIT_SHORT);
 
       /* Cygwin "version" aka build date */
       strcpy (name->version, cygwin_version.dll_build_date);

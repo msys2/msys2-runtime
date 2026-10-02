@@ -286,6 +286,19 @@ child_info_spawn::worker (const char *prog_arg, const char *const *argv,
   bool rc;
   int res = -1;
 
+  /* Environment variable MSYS2_ARG_CONV_EXCL contains a list
+     of ';' separated argument prefixes to pass un-modified.
+     A value of * means don't convert any arguments. */
+  char* msys2_arg_conv_excl_env = getenv("MSYS2_ARG_CONV_EXCL");
+  char* msys2_arg_conv_excl = NULL;
+  size_t msys2_arg_conv_excl_count = 0;
+  if (msys2_arg_conv_excl_env)
+    {
+      msys2_arg_conv_excl = (char*)alloca (strlen(msys2_arg_conv_excl_env)+1);
+      strcpy (msys2_arg_conv_excl, msys2_arg_conv_excl_env);
+      msys2_arg_conv_excl_count = string_split_delimited (msys2_arg_conv_excl, ';');
+    }
+
   /* Check if we have been called from exec{lv}p or spawn{lv}p and mask
      mode to keep only the spawn mode. */
   bool p_type_exec = !!(mode & _P_PATH_TYPE_EXEC);
@@ -376,6 +389,20 @@ child_info_spawn::worker (const char *prog_arg, const char *const *argv,
 	{
 	  moreinfo->argc = newargv.argc;
 	  moreinfo->argv = newargv;
+	}
+      else
+	{
+	  for (int i = 0; i < newargv.argc; i++)
+	    {
+	      //convert argv to win32
+	      int newargvlen = strlen (newargv[i]);
+	      char *tmpbuf = (char *)malloc (newargvlen + 1);
+	      memcpy (tmpbuf, newargv[i], newargvlen + 1);
+	      tmpbuf = arg_heuristic_with_exclusions(tmpbuf, msys2_arg_conv_excl, msys2_arg_conv_excl_count);
+	      debug_printf("newargv[%d] = %s", i, newargv[i]);
+	      newargv.replace (i, tmpbuf);
+	      free (tmpbuf);
+	    }
 	}
       if ((wincmdln || !real_path.iscygexec ())
 	   && !cmd.fromargv (newargv, real_path.get_win32 (),
@@ -508,10 +535,13 @@ child_info_spawn::worker (const char *prog_arg, const char *const *argv,
       bool switch_user = ::cygheap->user.issetuid ()
 			 && (::cygheap->user.saved_uid
 			     != ::cygheap->user.real_uid);
+      bool keep_posix = (iscmd (argv[0], "strace.exe")
+			|| iscmd (argv[0], "strace")) ? true : real_path.iscygexec ();
       moreinfo->envp = build_env (envp, envblock, moreinfo->envc,
 				  real_path.iscygexec (),
 				  switch_user ? ::cygheap->user.primary_token ()
-					      : NULL);
+					      : NULL,
+				  keep_posix);
       if (!moreinfo->envp || !envblock)
 	{
 	  set_errno (E2BIG);
