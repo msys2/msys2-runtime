@@ -620,6 +620,18 @@ __posix_spawn_fork (void **proc)
   return dofork (proc, &with_forkables);
 }
 
+/* Mandatory ASLR ("Force randomization for images" in Windows Security's
+   Exploit protection) loads the DLL at a different address in the forked
+   child, which fork emulation cannot survive.  */
+static bool
+forced_image_relocation ()
+{
+  PROCESS_MITIGATION_ASLR_POLICY pol = { 0 };
+  return GetProcessMitigationPolicy (GetCurrentProcess (), ProcessASLRPolicy,
+				     &pol, sizeof pol)
+	 && pol.EnableForceRelocateImages;
+}
+
 static int
 dofork (void **proc, bool *with_forkables)
 {
@@ -695,8 +707,19 @@ dofork (void **proc, bool *with_forkables)
 	debug_printf ("child %d - %s, errno %d", grouped.child_pid,
 		       grouped.errmsg, grouped.this_errno);
       else
-	system_printf ("child %d - %s, errno %d", grouped.child_pid,
-		       grouped.errmsg, grouped.this_errno);
+	{
+	  system_printf ("child %d - %s, errno %d", grouped.child_pid,
+			 grouped.errmsg, grouped.this_errno);
+	  static bool hinted;
+	  if (!hinted && forced_image_relocation ())
+	    {
+	      hinted = true;
+	      system_printf ("fork() cannot work while Windows' Mandatory ASLR "
+			     "(\"Force randomization for images\") is enforced for "
+			     "%P; exempt it under Windows Security > Exploit "
+			     "protection > Program settings, or turn that setting off");
+	    }
+	}
 
       set_errno (grouped.this_errno);
     }
