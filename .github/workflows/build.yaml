@@ -38,6 +38,22 @@ jobs:
           name: install
           path: _dest/
 
+      - name: Build test programs
+        shell: msys2 {0}
+        run: |
+          make -C x86_64-pc-cygwin/winsup/testsuite -j8 \
+            CFLAGS="-O2 -pipe -ggdb -std=gnu89 -w" check_programs
+
+      - name: Bundle up worktree
+        shell: msys2 {0}
+        run: $WINDIR/system32/tar.exe -czf wt.tgz --exclude _dest --exclude .git --exclude wt.tgz .
+
+      - name: Upload worktree archive
+        uses: actions/upload-artifact@v7
+        with:
+          name: wt.tgz
+          path: wt.tgz
+
   generate-msys2-tests-matrix:
     runs-on: ubuntu-latest
     outputs:
@@ -93,3 +109,50 @@ jobs:
       - name: Run tests
         uses: msys2/msys2-tests@main
 
+  cygwin-tests:
+    needs: [build]
+    runs-on: windows-latest
+    steps:
+      - name: setup-msys2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MSYS
+          update: true
+          install: msys2-devel base-devel diffutils make perl busybox cygutils
+
+      - name: Download worktree archive
+        uses: actions/download-artifact@v7
+        with:
+          name: wt.tgz
+
+      - name: Extract worktree
+        shell: msys2 {0}
+        run: $WINDIR/system32/tar.exe -xzf wt.tgz
+
+      - name: Run the test suite of Cygwin
+        shell: msys2 {0}
+        run: |
+          export PATH=/usr/bin:$WINDIR/system32
+          export MAKEFLAGS=-j8
+          export MSYS=winsymlinks:nativestrict
+          WINSUP=$PWD/x86_64-pc-cygwin/winsup
+          cp $WINSUP/cygserver/cygserver.exe $WINSUP/testsuite/testinst/usr/bin/
+          ( cd $WINSUP/testsuite/testinst/usr/bin && PATH=$PWD:$WINDIR/system32 "$WINDIR/System32/WindowsPowerShell/v1.0/powershell.exe" -command '& .\cygserver.exe' & )
+          # cygserver is launched asynchronously; wait for it to come up before
+          # running the SysV IPC tests (semtest/shmtest/msgtest) that depend on
+          # it, otherwise they race its startup and fail intermittently.
+          for i in $(seq 1 60); do
+            "$WINDIR/System32/tasklist.exe" //FI "IMAGENAME eq cygserver.exe" 2>/dev/null | grep -qi cygserver && break
+            sleep 1
+          done
+          sleep 5
+          cd $WINSUP && make check AM_COLOR_TESTS=always
+
+      - name: Upload testsuite logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: cygwin-testsuite-logs
+          path: |
+            x86_64-pc-cygwin/winsup/testsuite/**/*.log
+            x86_64-pc-cygwin/winsup/testsuite/**/*.trs
