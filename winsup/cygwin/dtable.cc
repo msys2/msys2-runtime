@@ -329,11 +329,7 @@ dtable::init_std_file_from_handle (int fd, HANDLE handle)
       if (CTTY_IS_VALID (myself->ctty))
 	dev.parse (myself->ctty);
       else
-	{
-	  dev.parse (FH_CONSOLE);
-	  CloseHandle (handle);
-	  handle = INVALID_HANDLE_VALUE;
-	}
+	dev.parse (FH_CONSOLE);
     }
   else if (GetCommState (handle, &dcb))
     /* FIXME: Not right - assumes ttyS0 */
@@ -1001,9 +997,15 @@ handle_to_fn (HANDLE h, char *posix_fn)
       if (wcsncasecmp (w32, DEV_NAMED_PIPE, DEV_NAMED_PIPE_LEN) == 0)
 	{
 	  w32 += DEV_NAMED_PIPE_LEN;
+#ifdef __MSYS__
+	  if (wcsncmp (w32, L"msys-", WCLEN (L"msys-")) != 0)
+	    return false;
+	  w32 += WCLEN (L"msys-");
+#else
 	  if (wcsncmp (w32, L"cygwin-", WCLEN (L"cygwin-")) != 0)
 	    return false;
 	  w32 += WCLEN (L"cygwin-");
+#endif
 	  /* Check for installation key and trailing dash. */
 	  w32len = cygheap->installation_key.Length / sizeof (WCHAR);
 	  if (w32len

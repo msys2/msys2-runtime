@@ -284,7 +284,7 @@ load_cygwin ()
   if (h)
     return 0;
 
-  if (!(h = LoadLibrary ("cygwin1.dll")))
+  if (!(h = LoadLibrary ("msys-2.0.dll")))
     {
       errno = ENOENT;
       return 0;
@@ -352,20 +352,40 @@ create_child (char **argv)
     flags |= CREATE_NEW_CONSOLE | CREATE_NEW_PROCESS_GROUP;
 
   make_command_line (one_line, argv);
+  if (!quiet)
+    printf ("create_child: %s\n", one_line.buf);
 
   SetConsoleCtrlHandler (NULL, 0);
+/* Commit message for this code was:
+"* strace.cc (create_child): Set CYGWIN=noglob when starting new process so that
 
-  const char *cygwin_env = getenv ("CYGWIN");
+  Cygwin will leave already-parsed the command line alonw."
+
+  I can see no reason for it and it badly breaks the ability to use
+  strace.exe to investigate calling a Cygwin program from a Windows
+  program, for example:
+  strace mingw32-make.exe
+  .. where mingw32-make.exe finds sh.exe and uses it as the shell.
+  The reason it badly breaks this use-case is because dcrt0.cc depends
+  on globbing to happen to parse commandlines from Windows programs;
+  irrespective of whether they contain any glob patterns or not.
+  
+  See quoted () comment:
+  "This must have been run from a Windows shell, so preserve
+     quotes for globify to play with later."
+
+  const char *cygwin_env = getenv ("MSYS");
   const char *space;
 
-  if (cygwin_env && strlen (cygwin_env) <= 256) /* sanity check */
+  if (cygwin_env && strlen (cygwin_env) <= 256) // sanity check
     space = " ";
   else
     space = cygwin_env = "";
-  char *newenv = (char *) malloc (sizeof ("CYGWIN=noglob")
+  char *newenv = (char *) malloc (sizeof ("MSYS=noglob")
 				  + strlen (space) + strlen (cygwin_env));
-  sprintf (newenv, "CYGWIN=noglob%s%s", space, cygwin_env);
+  sprintf (newenv, "MSYS=noglob%s%s", space, cygwin_env);
   _putenv (newenv);
+*/
   ret = CreateProcess (0, one_line.buf,	/* command line */
 		       NULL,	/* Security */
 		       NULL,	/* thread */

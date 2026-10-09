@@ -57,6 +57,7 @@ enum winsym_t
   WSYM_nativestrict,
   WSYM_nfs,
   WSYM_sysfile,
+  WSYM_deepcopy
 };
 
 exit_states NO_COPY exit_state;
@@ -69,10 +70,11 @@ bool allow_glob = true;
 bool ignore_case_with_glob;
 bool pipe_byte = true; /* Default to byte mode so that C# programs work. */
 bool reset_com;
-bool wincmdln;
-winsym_t allow_winsymlinks = WSYM_default;
+bool wincmdln = true;
+winsym_t allow_winsymlinks = WSYM_deepcopy;
 bool disable_pcon;
 bool winjitdebug = false;
+bool nativeinnerlinks = true;
 
 /* Taken from BSD libc:
    This variable is zero until a process has created a pthread.  It is used

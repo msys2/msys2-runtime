@@ -29,6 +29,7 @@ details. */
 #include "exception.h"
 #include "posix_timer.h"
 #include "gcc_seh.h"
+#include "cygwin/exit_process.h"
 
 /* Define macros for CPU-agnostic register access.  The _CX_foo
    macros are for access into CONTEXT, the _MC_foo ones for access into
@@ -528,14 +529,14 @@ int exec_prepared_command (PWCHAR command)
   PWCHAR rawenv = GetEnvironmentStringsW () ;
   for (PWCHAR p = rawenv; *p != L'\0'; p = wcschr (p, L'\0') + 1)
     {
-      if (wcsncmp (p, L"CYGWIN=", wcslen (L"CYGWIN=")) == 0)
+      if (wcsncmp (p, L"MSYS=", wcslen (L"MSYS=")) == 0)
 	{
 	  PWCHAR q = wcsstr (p, L"error_start") ;
 	  /* replace 'error_start=...' with '_rror_start=...' */
 	  if (q)
 	    {
 	      *q = L'_' ;
-	      SetEnvironmentVariableW (L"CYGWIN", p + wcslen (L"CYGWIN=")) ;
+	      SetEnvironmentVariableW (L"MSYS", p + wcslen (L"MSYS=")) ;
 	    }
 	  break;
 	}
@@ -1671,10 +1672,25 @@ exit_sig:
 dosig:
   if (have_execed && (ch_spawn.iscygwin () || !is_stop_or_cont (si.si_signo)))
     {
-      sigproc_printf ("terminating captive process");
-      if (::cygheap->ctty)
-	::cygheap->ctty->cleanup_before_exit ();
-      TerminateProcess (ch_spawn, sigExeced = si.si_signo);
+      switch (si.si_signo)
+        {
+        case SIGUSR1:
+        case SIGUSR2:
+        case SIGCONT:
+        case SIGSTOP:
+        case SIGTSTP:
+        case SIGTTIN:
+        case SIGTTOU:
+          system_printf ("Suppressing signal %d to win32 process (pid %u)",
+              (int)si.si_signo, (unsigned int)GetProcessId(ch_spawn));
+          goto done;
+        default:
+          sigproc_printf ("terminating captive process");
+          if (::cygheap->ctty)
+	    ::cygheap->ctty->cleanup_before_exit ();
+          rc = exit_process_tree (ch_spawn, 128 + (sigExeced = si.si_signo));
+          goto done;
+        }
     }
   /* Dispatch to the appropriate function. */
   sigproc_printf ("signal %d, signal handler %p", si.si_signo, handler);
