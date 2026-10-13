@@ -83,6 +83,9 @@ uname_x (struct utsname *name)
 	  case PROCESSOR_ARCHITECTURE_AMD64:
 	    strcpy (name->machine, "x86_64");
 	    break;
+	  case PROCESSOR_ARCHITECTURE_ARM64:
+	    strcpy (name->machine, "aarch64");
+	    break;
 	  default:
 	    strcpy (name->machine, "unknown");
 	    break;
@@ -164,6 +167,9 @@ uname (struct utsname *in_name)
 	{
 	  case PROCESSOR_ARCHITECTURE_AMD64:
 	    strcpy (name->machine, "x86_64");
+	    break;
+	  case PROCESSOR_ARCHITECTURE_ARM64:
+	    strcpy (name->machine, "aarch64");
 	    break;
 	  default:
 	    strcpy (name->machine, "unknown");
