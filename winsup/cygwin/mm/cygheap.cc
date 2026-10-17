@@ -169,10 +169,17 @@ init_cygheap::init_installation_root ()
 	       cygwin_hmodule, installation_root_buf, PATH_MAX);
 
   /* We don't care if fetching the final pathname fails, it's non-fatal and
-     the path returned by GetModuleFileNameW is still valid. */
+     the path returned by GetModuleFileNameW is still valid.
+     Open for attributes only.  In a Windows Server 2019 Hyper-V container,
+     the first process opening an image-layer file with read access makes
+     subsequent image mappings of that file come from the container volume
+     instead of the layer, at a different ASLR base.  A GENERIC_READ open of
+     our own DLL here did exactly that in the root process of a process tree,
+     so its forked children loaded the DLL at a different address and the
+     fork failed ("dll data read copy failed"). */
   HANDLE h;
-  h = CreateFileW (installation_root_buf, GENERIC_READ, FILE_SHARE_VALID_FLAGS,
-		   &sec_none, OPEN_EXISTING, 0, 0);
+  h = CreateFileW (installation_root_buf, FILE_READ_ATTRIBUTES,
+		   FILE_SHARE_VALID_FLAGS, &sec_none, OPEN_EXISTING, 0, 0);
   if (h != INVALID_HANDLE_VALUE)
     {
       GetFinalPathNameByHandleW (h, installation_root_buf, PATH_MAX,
