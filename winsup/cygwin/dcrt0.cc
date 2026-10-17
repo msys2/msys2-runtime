@@ -805,6 +805,96 @@ main_thread_sinit ()
   _REENT_CLEANUP(_REENT) = _cygtls::cleanup_early;
 }
 
+/* In a Windows Server 2019 container, a file from the image layers is
+   mapped as an image straight from the layer store (over VSMB under Hyper-V
+   isolation, from the host's layer directory under process isolation)
+   until some process opens it for reading through the container volume.
+   From then on new mappings come from the volume, at a different ASLR
+   base.  init_installation_root () does exactly that open on our own DLL,
+   so the forked children of the first process to map the DLL load it at an
+   address different from their parent's, and fork () fails with "dll data
+   read copy failed".  The same happens to a running process tree when any
+   other process later reads the DLL.
+
+   If we are that first process, re-exec ourselves once, now that the open
+   has moved the file: the new process and everything it forks map the DLL
+   from the volume.  The test is whether our image is mapped from the file
+   our own path leads to; only a process whose DLL is still mapped from the
+   layer fails it, so nothing changes elsewhere.  */
+extern HMODULE cygwin_hmodule;
+
+static void
+reexec_if_mapped_from_layer ()
+{
+  if (child_proc_info || dynamically_loaded)
+    return;
+
+  WCHAR marker[2];
+  if (GetEnvironmentVariableW (L"MSYS2_RUNTIME_REEXEC", marker, 2))
+    {
+      SetEnvironmentVariableW (L"MSYS2_RUNTIME_REEXEC", NULL);
+      return;
+    }
+
+  /* Which file is our image mapped from?  */
+  static union
+  {
+    MEMORY_SECTION_NAME msn;
+    WCHAR buf[NT_MAX_PATH + 8];
+  } u NO_COPY;
+  SIZE_T len;
+  NTSTATUS status = NtQueryVirtualMemory (NtCurrentProcess (), cygwin_hmodule,
+					  MemorySectionName, &u, sizeof u, &len);
+  if (!NT_SUCCESS (status))
+    return;
+
+  /* Which file does our path lead to now?  Attributes only: a read open is
+     what moves the file.  */
+  static WCHAR path[NT_MAX_PATH] NO_COPY;
+  static WCHAR now[NT_MAX_PATH] NO_COPY;
+  if (!GetModuleFileNameW (cygwin_hmodule, path, NT_MAX_PATH))
+    return;
+  HANDLE h = CreateFileW (path, FILE_READ_ATTRIBUTES, FILE_SHARE_VALID_FLAGS,
+			  NULL, OPEN_EXISTING, 0, NULL);
+  if (h == INVALID_HANDLE_VALUE)
+    return;
+  DWORD n = GetFinalPathNameByHandleW (h, now, NT_MAX_PATH,
+				       FILE_NAME_NORMALIZED | VOLUME_NAME_NT);
+  CloseHandle (h);
+  if (!n || n >= NT_MAX_PATH)
+    return;
+  UNICODE_STRING unow;
+  RtlInitUnicodeString (&unow, now);
+  if (RtlEqualUnicodeString (&u.msn.SectionFileName, &unow, TRUE))
+    return;	/* mapped from the file our path leads to: the normal case */
+
+  if (!SetEnvironmentVariableW (L"MSYS2_RUNTIME_REEXEC", L"1"))
+    return;
+
+  STARTUPINFOW si;
+  GetStartupInfoW (&si);
+  si.cb = sizeof si;
+  si.lpReserved2 = NULL;
+  si.cbReserved2 = 0;
+  si.dwFlags |= STARTF_USESTDHANDLES;
+  si.hStdInput = GetStdHandle (STD_INPUT_HANDLE);
+  si.hStdOutput = GetStdHandle (STD_OUTPUT_HANDLE);
+  si.hStdError = GetStdHandle (STD_ERROR_HANDLE);
+
+  PROCESS_INFORMATION pi;
+  if (!CreateProcessW (global_progname, GetCommandLineW (), NULL, NULL, TRUE,
+		       0, NULL, NULL, &si, &pi))
+    {
+      SetEnvironmentVariableW (L"MSYS2_RUNTIME_REEXEC", NULL);
+      return;
+    }
+  CloseHandle (pi.hThread);
+  WaitForSingleObject (pi.hProcess, INFINITE);
+  DWORD code = 1;
+  GetExitCodeProcess (pi.hProcess, &code);
+  ExitProcess (code);
+}
+
 /* Take over from libc's crt0.o and start the application. Note the
    various special cases when Cygwin DLL is being runtime loaded (as
    opposed to being link-time loaded by Cygwin apps) from a non
@@ -821,6 +911,8 @@ dll_crt0_1 (void *)
 
   if (dynamically_loaded)
     sigproc_init ();
+
+  reexec_if_mapped_from_layer ();
 
   /* Call this before accessing any files. */
   RtlSetProcessPlaceholderCompatibilityMode (PHCM_EXPOSE_PLACEHOLDERS);
