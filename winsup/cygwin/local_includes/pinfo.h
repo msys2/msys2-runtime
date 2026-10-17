@@ -228,7 +228,7 @@ public:
   void set_exit_code (DWORD n);
   _pinfo *operator -> () const {return procinfo;}
   int operator == (pinfo *x) const {return x->procinfo == procinfo;}
-  int operator == (pinfo &x) const {return x.procinfo == procinfo;}
+  int operator == (const pinfo &x) const {return x.procinfo == procinfo;}
   int operator == (_pinfo *x) const {return x == procinfo;}
   int operator == (void *x) const {return procinfo == x;}
   _pinfo *operator * () const {return procinfo;}
