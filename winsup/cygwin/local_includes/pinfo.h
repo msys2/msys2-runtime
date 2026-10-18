@@ -203,7 +203,7 @@ public:
   class cygthread *wait_thread;
 
   void init (pid_t, DWORD, HANDLE);
-  pinfo (_pinfo *x = NULL)
+  explicit pinfo (_pinfo *x = NULL)
   : pinfo_minimal (), destroy (false), winpid_hdl (NULL), procinfo (x),
     waiter_ready (false), wait_thread (NULL) {}
   pinfo (pid_t n, DWORD flag = 0)
@@ -227,10 +227,7 @@ public:
   void maybe_set_exit_code_from_windows ();
   void set_exit_code (DWORD n);
   _pinfo *operator -> () const {return procinfo;}
-  int operator == (pinfo *x) const {return x->procinfo == procinfo;}
-  int operator == (pinfo &x) const {return x.procinfo == procinfo;}
-  int operator == (_pinfo *x) const {return x == procinfo;}
-  int operator == (void *x) const {return procinfo == x;}
+  bool operator == (const pinfo &x) const {return x.procinfo == procinfo;}
   _pinfo *operator * () const {return procinfo;}
   operator _pinfo * () const {return procinfo;}
   int operator !() const {return !procinfo;}
