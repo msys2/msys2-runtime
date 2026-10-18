@@ -732,13 +732,14 @@ init_windows_system_directory ()
    "dll data read copy failed".  The same happens to a running process tree
    when any other process later reads the DLL.
 
-   So, before anything else is set up: open the DLL for reading ourselves,
-   which moves it if it was going to move, map a fresh view of it and ask
-   which file that view came from.  If it is not the file our image is
-   mapped from, re-exec once: the new process and everything it forks map
-   the DLL from the volume.  A mapping keeps its file, so the two names can
-   only differ if the file moved under us; on any other host they are the
-   same string from the same query.  */
+   So, before anything else is set up: open every module from outside the
+   Windows directory for reading ourselves (the exe, this DLL and the DLLs
+   linked to them), which moves them if they were going to move, then map
+   a fresh view of each and ask which file that view came from.  If any is
+   not the file the module's image is mapped from, re-exec once: the new
+   process and everything it forks map them all from the volume.  A mapping
+   keeps its file, so the two names can only differ if the file moved under
+   us; on any other host they are the same string from the same query.  */
 extern HMODULE cygwin_hmodule;
 
 /* Room for the UNICODE_STRING header MemorySectionName writes ahead of
@@ -760,16 +761,21 @@ section_name (PVOID addr, section_name_buf &u)
   return NT_SUCCESS (status) ? &u.msn.SectionFileName : NULL;
 }
 
-/* Open PATH for reading and close it again.  In a Server 2019 container
-   this is what moves a layer file onto the volume; elsewhere it changes
-   nothing.  */
-static void
+/* Open PATH for reading, read its first byte and close it again.  In a
+   Server 2019 container this is what moves a layer file onto the volume;
+   elsewhere it changes nothing.  Also called from dlopen, ahead of
+   LoadLibrary.  */
+void
 promote (PCWSTR path)
 {
   HANDLE h = CreateFileW (path, GENERIC_READ, FILE_SHARE_VALID_FLAGS, NULL,
 			  OPEN_EXISTING, 0, NULL);
-  if (h != INVALID_HANDLE_VALUE)
-    CloseHandle (h);
+  if (h == INVALID_HANDLE_VALUE)
+    return;
+  BYTE b;
+  DWORD n;
+  ReadFile (h, &b, 1, &n, NULL);
+  CloseHandle (h);
 }
 
 /* Which file does a fresh mapping of PATH come from, now?  */
@@ -801,8 +807,8 @@ fresh_section_name (PCWSTR path, section_name_buf &u)
   return name;
 }
 
-/* Does a fresh mapping of PATH, after a read open, come from a file other
-   than the one our image at BASE is mapped from?  */
+/* Does a fresh mapping of PATH come from a file other than the one the
+   image at BASE is mapped from?  */
 static bool
 moved (PVOID base, PCWSTR path)
 {
@@ -811,9 +817,40 @@ moved (PVOID base, PCWSTR path)
   PUNICODE_STRING w = section_name (base, was);
   if (!w)
     return false;
-  promote (path);
   PUNICODE_STRING n = fresh_section_name (path, now);
   return n && !RtlEqualUnicodeString (w, n, TRUE);
+}
+
+/* The modules the loader has mapped from outside the Windows directory:
+   the exe, this DLL and the DLLs linked to them.  Pass 0 promotes each,
+   pass 1 asks whether any of them moved.  */
+static bool
+any_module_moved ()
+{
+  static WCHAR path[NT_MAX_PATH] NO_COPY;
+  UNICODE_STRING windir;
+  RtlInitCountedUnicodeString (&windir, windows_directory,
+			       windows_directory_length * sizeof (WCHAR));
+  PLIST_ENTRY head = &NtCurrentTeb ()->Peb->Ldr->InLoadOrderModuleList;
+  for (int pass = 0; pass < 2; pass++)
+    for (PLIST_ENTRY x = head->Flink; x != head; x = x->Flink)
+      {
+	PLDR_DATA_TABLE_ENTRY mod = CONTAINING_RECORD (x, LDR_DATA_TABLE_ENTRY,
+						       InLoadOrderLinks);
+	PUNICODE_STRING name = &mod->FullDllName;
+	if (name->Length >= sizeof path
+	    || (name->Length > windir.Length
+		&& RtlPrefixUnicodeString (&windir, name, TRUE)
+		&& name->Buffer[windir.Length / sizeof (WCHAR)] == L'\\'))
+	  continue;
+	memcpy (path, name->Buffer, name->Length);
+	path[name->Length / sizeof (WCHAR)] = L'\0';
+	if (pass == 0)
+	  promote (path);
+	else if (moved (mod->DllBase, path))
+	  return true;
+      }
+  return false;
 }
 
 static void
@@ -829,10 +866,7 @@ reexec_if_mapped_from_layer ()
       return;
     }
 
-  static WCHAR path[NT_MAX_PATH] NO_COPY;
-  if (!GetModuleFileNameW (cygwin_hmodule, path, NT_MAX_PATH))
-    return;
-  if (!moved (cygwin_hmodule, path))
+  if (!any_module_moved ())
     return;
 
   if (!SetEnvironmentVariableW (L"MSYS2_RUNTIME_REEXEC", L"1"))
