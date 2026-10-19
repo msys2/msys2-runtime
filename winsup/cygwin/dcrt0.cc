@@ -853,10 +853,11 @@ any_module_moved ()
   return false;
 }
 
-/* Every DLL and exe in our own DLL's directory.  A program this process
-   tree spawns later links DLLs none of us has loaded, and those are still
-   on the layer until something reads them; spawn reads the exe itself.
-   Run by the re-exec'd process, so once per such container.  */
+/* Every DLL in our own DLL's directory.  A program this process tree
+   spawns later links DLLs none of us has loaded, and those are still on
+   the layer until something reads them.  Exes need no sweep: spawn reads
+   the exe it starts, and an exe started from outside checks itself.  Run
+   by the re-exec'd process, so once per such container.  */
 static void
 promote_siblings ()
 {
@@ -869,23 +870,19 @@ promote_siblings ()
     return;
   base++;
   size_t room = NT_MAX_PATH - (base - path);
-  static const PCWSTR patterns[] = { L"*.dll", L"*.exe" };
-  for (PCWSTR pattern : patterns)
-    {
-      wcscpy (base, pattern);
-      WIN32_FIND_DATAW fd;
-      HANDLE hf = FindFirstFileW (path, &fd);
-      if (hf == INVALID_HANDLE_VALUE)
-	continue;
-      do
-	if (wcslen (fd.cFileName) < room)
-	  {
-	    wcscpy (base, fd.cFileName);
-	    promote (path);
-	  }
-      while (FindNextFileW (hf, &fd));
-      FindClose (hf);
-    }
+  wcscpy (base, L"*.dll");
+  WIN32_FIND_DATAW fd;
+  HANDLE hf = FindFirstFileW (path, &fd);
+  if (hf == INVALID_HANDLE_VALUE)
+    return;
+  do
+    if (wcslen (fd.cFileName) < room)
+      {
+	wcscpy (base, fd.cFileName);
+	promote (path);
+      }
+  while (FindNextFileW (hf, &fd));
+  FindClose (hf);
 }
 
 static void
