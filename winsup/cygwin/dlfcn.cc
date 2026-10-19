@@ -185,8 +185,6 @@ get_exedir (char * exedirbuf, wchar_t * wpathbuf)
   return strlen (exedirbuf);
 }
 
-extern void promote (PCWSTR path);	/* dcrt0.cc */
-
 extern "C" void *
 dlopen (const char *name, int flags)
 {
