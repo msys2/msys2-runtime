@@ -730,16 +730,16 @@ init_windows_system_directory ()
    base.  So the forked children of the first process to map our DLL load
    it at an address different from their parent's, and fork () fails with
    "dll data read copy failed".  The same happens to a running process tree
-   when any other process later reads the DLL.
+   when any other process later reads a module it has mapped.
 
-   So, before anything else is set up: open every module from outside the
-   Windows directory for reading ourselves (the exe, this DLL and the DLLs
-   linked to them), which moves them if they were going to move, then map
-   a fresh view of each and ask which file that view came from.  If any is
-   not the file the module's image is mapped from, re-exec once: the new
-   process and everything it forks map them all from the volume.  A mapping
-   keeps its file, so the two names can only differ if the file moved under
-   us; on any other host they are the same string from the same query.  */
+   So, before anything else is set up: read the first byte of every module
+   from outside the Windows directory (the exe, this DLL and the DLLs linked
+   to them), which moves them if they were going to move, then map a fresh
+   view of each and ask which file that view came from.  If any is not the
+   file the module's image is mapped from, re-exec once: the new process
+   and everything it forks map them all from the volume.  A mapping keeps
+   its file, so the two names can only differ if the file moved under us;
+   on any other host they are the same string from the same query.  */
 extern HMODULE cygwin_hmodule;
 
 /* Room for the UNICODE_STRING header MemorySectionName writes ahead of
