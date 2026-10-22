@@ -917,17 +917,55 @@ reexec_if_mapped_from_layer ()
   si.hStdOutput = GetStdHandle (STD_OUTPUT_HANDLE);
   si.hStdError = GetStdHandle (STD_ERROR_HANDLE);
 
+  /* Without a console, don't give the child one either, as fork does.  */
+  DWORD flags = CREATE_SUSPENDED;
+  HANDLE con = CreateFileW (L"CONOUT$", GENERIC_WRITE,
+			    FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
+			    OPEN_EXISTING, 0, NULL);
+  if (con != INVALID_HANDLE_VALUE)
+    CloseHandle (con);
+  else
+    flags |= DETACHED_PROCESS;
+
+  /* Whoever started us knows only our pid.  If they terminate us, the
+     child goes too, as we would have.  Its own children break away from
+     the job, so they outlive it as they would have outlived us.  */
+  JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits = {};
+  limits.BasicLimitInformation.LimitFlags
+    = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE | JOB_OBJECT_LIMIT_SILENT_BREAKAWAY_OK;
+  HANDLE job = CreateJobObjectW (NULL, NULL);
+  if (job && !SetInformationJobObject (job, JobObjectExtendedLimitInformation,
+				       &limits, sizeof limits))
+    {
+      CloseHandle (job);
+      job = NULL;
+    }
+
   PROCESS_INFORMATION pi;
   if (!CreateProcessW (global_progname, GetCommandLineW (), NULL, NULL, TRUE,
-		       0, NULL, NULL, &si, &pi))
+		       flags, NULL, NULL, &si, &pi))
     {
+      if (job)
+	CloseHandle (job);
       SetEnvironmentVariableW (L"MSYS2_RUNTIME_REEXEC", NULL);
       return;
     }
+  if (job)
+    AssignProcessToJobObject (job, pi.hProcess);
+  ResumeThread (pi.hThread);
   CloseHandle (pi.hThread);
   WaitForSingleObject (pi.hProcess, INFINITE);
   DWORD code = 1;
   GetExitCodeProcess (pi.hProcess, &code);
+  /* A descendant held in the job by a nested one of its own (ulimit -v)
+     must not be killed when we exit normally.  */
+  if (job)
+    {
+      limits.BasicLimitInformation.LimitFlags
+	= JOB_OBJECT_LIMIT_SILENT_BREAKAWAY_OK;
+      SetInformationJobObject (job, JobObjectExtendedLimitInformation,
+			       &limits, sizeof limits);
+    }
   ExitProcess (code);
 }
 
