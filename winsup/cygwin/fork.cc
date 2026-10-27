@@ -44,8 +44,8 @@ class frok
   int child_pid;
   int this_errno;
   HANDLE hchild;
-  int parent (volatile char * volatile here);
-  int child (volatile char * volatile here);
+  int parent (volatile char *here);
+  int child (volatile char *here);
   bool error (const char *fmt, ...);
   friend int dofork (void **proc, bool *with_forkables);
 };
@@ -132,7 +132,7 @@ child_info::prefork (bool detached)
 }
 
 int
-frok::child (volatile char * volatile here)
+frok::child (volatile char *here)
 {
   HANDLE& hParent = ch.parent;
 
@@ -203,7 +203,7 @@ frok::child (volatile char * volatile here)
 }
 
 int
-frok::parent (volatile char * volatile stack_here)
+frok::parent (volatile char *stack_here)
 {
   HANDLE forker_finished;
   DWORD rc;
