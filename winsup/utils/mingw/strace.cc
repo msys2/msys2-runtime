@@ -228,7 +228,7 @@ make_command_line (linebuf & one_line, char **argv)
 {
   for (; *argv; argv++)
     {
-      char *p = NULL;
+      const char *p = NULL;
       const char *a = *argv;
 
       int len = strlen (a);
