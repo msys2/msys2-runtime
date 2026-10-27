@@ -40,7 +40,7 @@ typedef struct
 static int
 find_tar_ext (const char *path)
 {
-  char *p = strchr (path, '\0') - 9;
+  const char *p = strchr (path, '\0') - 9;
   if (p <= path)
     return 0;
   if ((p = strstr (p, ".tar")) != NULL)
