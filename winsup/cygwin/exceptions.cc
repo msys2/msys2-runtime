@@ -825,7 +825,7 @@ exception::handle (EXCEPTION_RECORD *e, exception_list *frame, CONTEXT *in,
      undefined so we just set those to the faulting instruction too.  */
   si.si_addr = (si.si_signo == SIGSEGV || si.si_signo == SIGBUS)
 	       ? (void *) e->ExceptionInformation[1] : (void *) in->_CX_instPtr;
-  me.incyg++;
+  me.incyg = me.incyg + 1;
   sig_send (NULL, si, &me);	/* Signal myself */
   if ((NTSTATUS) e->ExceptionCode == STATUS_STACK_OVERFLOW)
     {
@@ -840,7 +840,7 @@ exception::handle (EXCEPTION_RECORD *e, exception_list *frame, CONTEXT *in,
       global_sigs[SIGSEGV].sa_handler = SIG_DFL;
       sig_send (NULL, si, &me);
     }
-  me.incyg--;
+  me.incyg = me.incyg - 1;
   e->ExceptionFlags = 0;
   return ExceptionContinueExecution;
 }

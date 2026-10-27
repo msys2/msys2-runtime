@@ -802,7 +802,7 @@ dll_crt0_1 (void *)
 {
   extern void initial_setlocale ();
 
-  _my_tls.incyg++;
+  _my_tls.incyg = _my_tls.incyg + 1;
   /* Inherit "parent" exec'ed process sigmask */
   if (spawn_info && __in_forkee != FORKING)
     _my_tls.sigmask = spawn_info->sigmask;
@@ -974,7 +974,7 @@ dll_crt0_1 (void *)
     {
       /* Handle any signals which may have arrived */
       _my_tls.call_signal_handler ();
-      _my_tls.incyg--;	/* Not in Cygwin anymore */
+      _my_tls.incyg = _my_tls.incyg - 1;	/* Not in Cygwin anymore */
     }
   else
     {
@@ -999,7 +999,7 @@ dll_crt0_1 (void *)
       /* Handle any signals which may have arrived */
       sig_dispatch_pending (false);
       _my_tls.call_signal_handler ();
-      _my_tls.incyg--;	/* Not in Cygwin anymore */
+      _my_tls.incyg = _my_tls.incyg - 1;	/* Not in Cygwin anymore */
       cygwin_exit (user_data->main (__argc, newargv, environ));
     }
   __asm__ ("				\n\
