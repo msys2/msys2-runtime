@@ -398,7 +398,7 @@ killpg (pid_t pgrp, int sig)
 extern "C" void
 abort (void)
 {
-  _my_tls.incyg++;
+  _my_tls.incyg = _my_tls.incyg + 1;
   sig_dispatch_pending ();
   /* Ensure that SIGABRT can be caught regardless of blockage. */
   sigset_t sig_mask;
