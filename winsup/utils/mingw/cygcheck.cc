@@ -444,7 +444,7 @@ find_on_path (const char *in_file, const char *ext, bool showall = false,
       return 0;
     }
 
-  char *hasext = strrchr (file, '.');
+  const char *hasext = strrchr (file, '.');
   if (hasext && !strpbrk (hasext, "/\\"))
     ext = "";
 
