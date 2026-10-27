@@ -979,7 +979,7 @@ cygcheck (const char *app)
     }
 
   char *s;
-  char *sep = strpbrk (papp, ":/\\");
+  const char *sep = strpbrk (papp, ":/\\");
   if (!sep)
     {
       static char dot[] = ".";
