@@ -53,7 +53,7 @@ jobs:
       matrix:
         include: ${{ fromJson(needs.generate-msys2-tests-matrix.outputs.matrix) }}
 
-    name: msys2-tests ${{ matrix.msystem }}-${{ matrix.cc }}
+    name: msys2-tests ${{ matrix.name }}
     runs-on: ${{ matrix.runner }}
     env:
       CC: ${{ matrix.cc }}
