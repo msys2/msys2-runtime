@@ -185,6 +185,67 @@ get_exedir (char * exedirbuf, wchar_t * wpathbuf)
   return strlen (exedirbuf);
 }
 
+/* A relocated DLL must not occupy the parent's released Windows stack:
+   the fork child still uses that stack while reserving DLL addresses.
+   Reserve free space below 4 GiB during LoadLibraryW, sharing reservations
+   across nested and concurrent calls, but not across fork. */
+static SRWLOCK NO_COPY low_dll_lock = SRWLOCK_INIT;
+static PVOID NO_COPY low_dll_reservations[256];
+static unsigned NO_COPY low_dll_count, low_dll_users;
+
+static void
+reserve_low_dll_space ()
+{
+  const uintptr_t limit = 0x100000000UL;
+  const uintptr_t gran = wincap.allocation_granularity ();
+  MEMORY_BASIC_INFORMATION mbi;
+
+  AcquireSRWLockExclusive (&low_dll_lock);
+  ++low_dll_users;
+  for (uintptr_t p = gran;
+       p < limit && VirtualQuery ((PVOID) p, &mbi, sizeof mbi); )
+    {
+      uintptr_t end = (uintptr_t) mbi.BaseAddress + mbi.RegionSize;
+      if (mbi.State == MEM_FREE)
+	{
+	  uintptr_t lo = roundup2 ((uintptr_t) mbi.BaseAddress, gran);
+	  uintptr_t hi = rounddown (MIN (end, limit), gran);
+	  if (lo < hi)
+	    {
+	      if (low_dll_count == sizeof low_dll_reservations
+				   / sizeof *low_dll_reservations)
+		{
+		  debug_printf ("too many low DLL reservations");
+		  break;
+		}
+	      if (VirtualAlloc ((PVOID) lo, hi - lo, MEM_RESERVE,
+				PAGE_NOACCESS))
+		low_dll_reservations[low_dll_count++] = (PVOID) lo;
+	      else
+		debug_printf ("unable to reserve low DLL space at %p, %E",
+			      (PVOID) lo);
+	    }
+	}
+      if (end <= p)
+	break;
+      p = end;
+    }
+  ReleaseSRWLockExclusive (&low_dll_lock);
+}
+
+static void
+release_low_dll_space ()
+{
+  AcquireSRWLockExclusive (&low_dll_lock);
+  /* A fork from a DLL initializer has no inherited reservations. */
+  if (low_dll_users && !--low_dll_users)
+    while (low_dll_count)
+      if (!VirtualFree (low_dll_reservations[--low_dll_count], 0,
+			MEM_RELEASE))
+	debug_printf ("unable to release low DLL space, %E");
+  ReleaseSRWLockExclusive (&low_dll_lock);
+}
+
 extern "C" void *
 dlopen (const char *name, int flags)
 {
@@ -277,7 +338,15 @@ dlopen (const char *name, int flags)
 	    break;
 	}
 
+      reserve_low_dll_space ();
       ret = (void *) LoadLibraryW (wpath);
+      DWORD load_error = ret ? 0 : GetLastError ();
+      release_low_dll_space ();
+      /* Preserve support for DLLs fixed at a low address. */
+      if (!ret && load_error == ERROR_INVALID_ADDRESS)
+	ret = (void *) LoadLibraryW (wpath);
+      else if (!ret)
+	SetLastError (load_error);
       /* reference counting */
       if (ret)
 	{
