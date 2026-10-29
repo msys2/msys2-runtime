@@ -735,7 +735,7 @@ void dll_list::load_after_fork_impl (HANDLE parent, dll* d, int retries)
      the preferred base recorded in the dll. In this case, we should make
      the LoadLibraryExW call unconditional.
    */
-  for ( ; d; d = dlls.inext ())
+  for ( ; d; d = dlls.inext (), retries = 0)
     if (hold_type == DLL_LOAD && d->handle != d->preferred_base)
       {
 	/* See if the DLL will load in proper place. If not, unload it,
