@@ -212,6 +212,10 @@ bool timeval_to_ms (const struct timeval *, DWORD &);
 /* Console related */
 void init_console_handler (bool);
 
+/* Read a file's first byte, so that in a Server 2019 container it is
+   mapped from the volume from now on (dcrt0.cc). */
+void promote (PCWSTR);
+
 extern bool wsock_started;
 
 /* Printf type functions */
