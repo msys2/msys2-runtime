@@ -56,7 +56,7 @@ class tls_pathbuf
 	};
       uint64_t _counters;
     };
-  HANDLE tls_heap;
+  char *buffer_base;
   char  *c_buf[TP_NUM_C_BUFS];
   WCHAR *w_buf[TP_NUM_W_BUFS];
 
