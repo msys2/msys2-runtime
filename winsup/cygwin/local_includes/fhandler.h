@@ -1490,6 +1490,12 @@ public:
   DWORD fifo_reader_thread_func ();
   void fifo_client_lock () { _fifo_client_lock.lock (); }
   void fifo_client_unlock () { _fifo_client_lock.unlock (); }
+  /* Held by fork until the child has copied fc_handler. */
+  void fork_lock (bool lock_it)
+  {
+    if (reader)
+      lock_it ? fifo_client_lock () : fifo_client_unlock ();
+  }
   void record_connection (fifo_client_handler&, bool = true,
 			  fifo_client_connect_state = fc_connected);
 

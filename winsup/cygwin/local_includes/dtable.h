@@ -99,6 +99,7 @@ public:
   void delete_archetype (fhandler_base *);
   void fixup_before_exec (DWORD win_proc_id);
   void fixup_before_fork (DWORD win_proc_id);
+  void fifo_fork_lock (bool);
   void lock () {lock_process::locker.acquire ();}
   void unlock () {lock_process::locker.release ();}
   inline void reserve (int fd) { fds.reserve (fd); }
