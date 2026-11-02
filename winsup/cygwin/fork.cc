@@ -326,6 +326,12 @@ frok::parent (volatile char *stack_here)
   si.lpReserved2 = (LPBYTE) &ch;
   si.cbReserved2 = sizeof (ch);
 
+  /* Keep FIFO readers from changing their client handler lists until
+     the child has copied them.  Before the malloc lock: the reader
+     thread may realloc while holding its lock. */
+  cygheap->fdtab.fifo_fork_lock (true);
+  bool fifos_locked = true;
+
   /* NEVER, EVER, call a function which in turn calls malloc&friends while this
      malloc lock is active! */
   __malloc_lock ();
@@ -417,6 +423,10 @@ frok::parent (volatile char *stack_here)
 	}
       break;
     }
+
+  /* The child has copied cygheap and heap. */
+  cygheap->fdtab.fifo_fork_lock (false);
+  fifos_locked = false;
 
   /* Restore impersonation */
   cygheap->user.reimpersonate ();
@@ -574,6 +584,8 @@ cleanup:
       cygheap->unlock ();
       __malloc_unlock ();
     }
+  if (fifos_locked)
+    cygheap->fdtab.fifo_fork_lock (false);
 
   /* Remember to de-allocate the fd table. */
   if (hchild)

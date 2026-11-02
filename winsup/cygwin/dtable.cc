@@ -1112,6 +1112,25 @@ dtable::fixup_before_fork (DWORD target_proc_id)
   unlock ();
 }
 
+/* Lock or unlock the client handler list of each FIFO reader, once per
+   fhandler, while a child is being forked. */
+void
+dtable::fifo_fork_lock (bool lock_it)
+{
+  lock ();
+  fhandler_base *fh;
+  for (size_t i = 0; i < size; i++)
+    if ((fh = fds[i]) != NULL && fh->isfifo ())
+      {
+	size_t j;
+	for (j = 0; j < i && fds[j] != fh; j++)
+	  continue;
+	if (j == i)
+	  ((fhandler_fifo *) fh)->fork_lock (lock_it);
+      }
+  unlock ();
+}
+
 void
 dtable::fixup_before_exec (DWORD target_proc_id)
 {
