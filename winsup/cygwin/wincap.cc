@@ -248,14 +248,25 @@ wincapc wincap __attribute__((section (".cygwin_dll_common"), shared));
 extern IMAGE_DOS_HEADER
 __image_base__;
 
+/* The shared wincap structure may contain a caps pointer into another
+   process' image after exec.  Ignore it if this DLL was relocated. */
+static bool
+in_this_image (const void *p)
+{
+  MEMORY_BASIC_INFORMATION mbi;
+  return VirtualQuery (p, &mbi, sizeof mbi)
+	 && mbi.AllocationBase == &__image_base__;
+}
+
 void
 wincapc::init ()
 {
   PIMAGE_NT_HEADERS ntheader;
   USHORT emul_mach;
 
-  if (caps)
+  if (caps && in_this_image (caps))
     return;		// already initialized
+  caps = NULL;
 
   GetSystemInfo (&system_info);
   version.dwOSVersionInfoSize = sizeof (RTL_OSVERSIONINFOEXW);
