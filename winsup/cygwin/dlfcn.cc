@@ -277,6 +277,16 @@ dlopen (const char *name, int flags)
 	    break;
 	}
 
+      /* A DLL not yet in this process is read first, so that in a Server
+	 2019 container its first mapping comes from the volume (see
+	 reexec_if_mapped_from_layer in dcrt0.cc).  One already loaded is
+	 left alone: reading it would move it under the processes that have
+	 it mapped.  */
+      HMODULE loaded;
+      if (!GetModuleHandleExW (GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+			       wpath, &loaded))
+	promote (wpath);
+
       ret = (void *) LoadLibraryW (wpath);
       /* reference counting */
       if (ret)
