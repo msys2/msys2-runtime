@@ -70,11 +70,48 @@
       ReleaseMutex (wsock_mtx); \
     }
 
-static wsa_event wsa_events[NUM_SOCKS] __attribute__((section (".cygwin_dll_common"), shared));
+struct wsa_shared_data
+{
+  LONG socket_serial_number;
+  wsa_event events[NUM_SOCKS];
+};
 
-static LONG socket_serial_number __attribute__((section (".cygwin_dll_common"), shared));
+static wsa_shared_data NO_COPY *wsa_shared;
 
 static HANDLE wsa_slot_mtx;
+
+/* Map the socket table lazily from the session namespace, so it is shared
+   with exactly the processes which can see the per-socket mutexes. */
+static wsa_shared_data *
+wsa_table ()
+{
+  if (!wsa_shared)
+    {
+      UNICODE_STRING uname;
+      OBJECT_ATTRIBUTES attr;
+      LARGE_INTEGER size = { .QuadPart = sizeof (wsa_shared_data) };
+      HANDLE h;
+
+      RtlInitUnicodeString (&uname, L"socket-events.1");
+      InitializeObjectAttributes (&attr, &uname, OBJ_OPENIF,
+				  get_session_parent_dir (),
+				  everyone_sd (SECTION_ALL_ACCESS));
+      NTSTATUS status = NtCreateSection (&h, SECTION_ALL_ACCESS, &attr, &size,
+					 PAGE_READWRITE, SEC_COMMIT, NULL);
+      if (!NT_SUCCESS (status))
+	api_fatal ("Couldn't create/open shared socket table: %y", status);
+      /* Keep the handle open, otherwise the name vanishes with it. */
+      PVOID p = MapViewOfFile (h, FILE_MAP_WRITE, 0, 0, 0);
+      if (!p)
+	api_fatal ("Couldn't map shared socket table: %E");
+      if (InterlockedCompareExchangePointer ((PVOID *) &wsa_shared, p, NULL))
+	{
+	  UnmapViewOfFile (p);
+	  NtClose (h);
+	}
+    }
+  return wsa_shared;
+}
 
 static PWCHAR
 sock_shared_name (PWCHAR buf, LONG num)
@@ -86,6 +123,7 @@ sock_shared_name (PWCHAR buf, LONG num)
 static wsa_event *
 search_wsa_event_slot (LONG new_serial_number)
 {
+  wsa_event *wsa_events = wsa_table ()->events;
   WCHAR name[32], searchname[32];
   UNICODE_STRING uname;
   OBJECT_ATTRIBUTES attr;
@@ -185,6 +223,7 @@ get_ext_funcptr (SOCKET sock, void *funcptr)
 fhandler_socket_wsock::fhandler_socket_wsock () :
   fhandler_socket (),
   wsock_events (NULL),
+  wsock_slot (0),
   wsock_mtx (NULL),
   wsock_evt (NULL),
   status (),
@@ -211,9 +250,9 @@ fhandler_socket_wsock::init_events ()
   do
     {
       new_serial_number =
-	InterlockedIncrement (&socket_serial_number);
+	InterlockedIncrement (&wsa_table ()->socket_serial_number);
       if (!new_serial_number)	/* 0 is reserved for global mutex */
-	InterlockedIncrement (&socket_serial_number);
+	InterlockedIncrement (&wsa_table ()->socket_serial_number);
       set_ino (new_serial_number);
       RtlInitUnicodeString (&uname, sock_shared_name (name, new_serial_number));
       InitializeObjectAttributes (&attr, &uname, OBJ_INHERIT | OBJ_OPENIF,
@@ -253,6 +292,7 @@ fhandler_socket_wsock::init_events ()
       NtClose (wsock_mtx);
       return false;
     }
+  wsock_slot = wsock_events - wsa_table ()->events;
   if (get_socket_type () == SOCK_DGRAM)
     wsock_events->events = FD_WRITE;
   return true;
@@ -503,6 +543,7 @@ fhandler_socket_wsock::fixup_before_fork_exec (DWORD win_pid)
 void
 fhandler_socket_wsock::fixup_after_fork (HANDLE parent)
 {
+  wsock_events = wsa_table ()->events + wsock_slot;
   fork_fixup (parent, wsock_mtx, "wsock_mtx");
   fork_fixup (parent, wsock_evt, "wsock_evt");
 
@@ -533,6 +574,7 @@ fhandler_socket_wsock::fixup_after_fork (HANDLE parent)
 void
 fhandler_socket_wsock::fixup_after_exec ()
 {
+  wsock_events = wsa_table ()->events + wsock_slot;
   if (need_fixup_before () && !close_on_exec ())
     fixup_after_fork (NULL);	/* No parent handle required. */
 }
