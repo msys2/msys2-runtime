@@ -94,6 +94,35 @@ MKSID (mandatory_system_integrity_sid, "S-1-16-16384",
 MKSID (well_known_samba_unix_user_fake_sid, "S-1-22-1-0",
        SECURITY_SAMBA_UNIX_AUTHORITY, 2, 1, 0);
 
+/* Returns the AppContainer SID of the process token, or NULL if the process
+   isn't running in an AppContainer. */
+PSID
+appcontainer_sid ()
+{
+  static bool NO_COPY checked;
+  static PSID NO_COPY sid;
+  struct appcontainer_info
+  {
+    TOKEN_APPCONTAINER_INFORMATION info;
+    BYTE sid[SECURITY_MAX_SID_SIZE];
+  };
+  static appcontainer_info NO_COPY buf;
+
+  if (!checked)
+    {
+      ULONG size;
+      NTSTATUS status = NtQueryInformationToken (hProcToken,
+						 TokenAppContainerSid,
+						 &buf, sizeof buf, &size);
+      if (!NT_SUCCESS (status))
+	api_fatal ("NtQueryInformationToken(TokenAppContainerSid): %y",
+		   status);
+      sid = buf.info.TokenAppContainer;
+      checked = true;
+    }
+  return sid;
+}
+
 void
 cygpsid::debug_print (const char *prefix) const
 {
@@ -547,7 +576,7 @@ bool
 sec_acl (PACL acl, bool original, bool admins, PSID sid1, PSID sid2, DWORD access2)
 {
   NTSTATUS status;
-  size_t acl_len = MAX_DACL_LEN (5);
+  size_t acl_len = MAX_DACL_LEN (6);
   LPVOID pAce;
   cygpsid psid;
 
@@ -591,6 +620,14 @@ sec_acl (PACL acl, bool original, bool admins, PSID sid1, PSID sid2, DWORD acces
 				   well_known_system_sid);
   if (!NT_SUCCESS (status))
     debug_printf ("RtlAddAccessAllowedAce(system) %y", status);
+  PSID app_sid = appcontainer_sid ();
+  if (app_sid)
+    {
+      status = RtlAddAccessAllowedAce (acl, ACL_REVISION, GENERIC_ALL,
+				       app_sid);
+      if (!NT_SUCCESS (status))
+	debug_printf ("RtlAddAccessAllowedAce(AppContainer) %y", status);
+    }
   status = RtlFirstFreeAce (acl, &pAce);
   if (NT_SUCCESS (status) && pAce)
     acl->AclSize = (char *) pAce - (char *) acl;
@@ -689,6 +726,10 @@ _everyone_sd (void *buf, ACCESS_MASK access)
   NTSTATUS status;
   PISECURITY_DESCRIPTOR psd = (PISECURITY_DESCRIPTOR) buf;
 
+  /* In an AppContainer, use the token's default security, which grants the
+     user, the logon session, SYSTEM, and the AppContainer, not everyone. */
+  if (appcontainer_sid ())
+    return NULL;
   if (psd)
     {
       RtlCreateSecurityDescriptor (psd, SECURITY_DESCRIPTOR_REVISION);

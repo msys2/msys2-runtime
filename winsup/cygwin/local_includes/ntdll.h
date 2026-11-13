@@ -1617,6 +1617,8 @@ extern "C"
   VOID RtlFreeUnicodeString (PUNICODE_STRING);
   BOOLEAN RtlFirstFreeAce (PACL, PVOID *);
   NTSTATUS RtlGetAce (PACL, ULONG, PVOID);
+  NTSTATUS RtlGetAppContainerNamedObjectPath (HANDLE, PSID, BOOLEAN,
+					      PUNICODE_STRING);
   NTSTATUS RtlGetControlSecurityDescriptor (PSECURITY_DESCRIPTOR,
 					    PSECURITY_DESCRIPTOR_CONTROL,
 					    PULONG);
