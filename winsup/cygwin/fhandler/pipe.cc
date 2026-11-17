@@ -850,6 +850,7 @@ fhandler_pipe::create (LPSECURITY_ATTRIBUTES sa_ptr, PHANDLE r, PHANDLE w,
      Retrying will probably never be necessary, but we want
      to be as robust as possible.  */
   DWORD err = 0;
+  bool local = false;
   while (r && !*r)
     {
       static volatile ULONG pipe_unique_id;
@@ -900,6 +901,20 @@ fhandler_pipe::create (LPSECURITY_ATTRIBUTES sa_ptr, PHANDLE r, PHANDLE w,
 	    *r = NULL;
 	  break;
 	case ERROR_ACCESS_DENIED:
+	  /* An AppContainer process may be denied creating pipes in the
+	     global namespace.  Retry in its private one, which the
+	     "LOCAL\" prefix maps to.  */
+	  if (!local && appcontainer_sid ())
+	    {
+	      char *p = pipename + strlen ("\\\\.\\pipe\\");
+	      memmove (p + 6, p, strlen (p) + 1);
+	      memcpy (p, "LOCAL\\", 6);
+	      len += 6;
+	      local = true;
+	      debug_printf ("pipe access denied, retrying as %s", pipename);
+	      *r = NULL;
+	      break;
+	    }
 	  /* The pipe is already open with incompatible parameters.
 	     Pick a new name and retry.  */
 	  debug_printf ("pipe access denied%s", !name ? ", retrying" : "");
@@ -1077,6 +1092,7 @@ nt_create (LPSECURITY_ATTRIBUTES sa_ptr, HANDLE &r, HANDLE &w, DWORD psize,
      Retrying will probably never be necessary, but we want
      to be as robust as possible.  */
   NTSTATUS err = STATUS_SUCCESS;
+  bool local = false;
   while (!r)
     {
       static volatile ULONG pipe_unique_id;
@@ -1123,6 +1139,18 @@ nt_create (LPSECURITY_ATTRIBUTES sa_ptr, HANDLE &r, HANDLE &w, DWORD psize,
 	  r = NULL;
 	  break;
 	case STATUS_ACCESS_DENIED:
+	  /* See fhandler_pipe::create: retry in the AppContainer's private
+	     namespace, which the named pipe file system maps "LOCAL\" to. */
+	  if (!local && appcontainer_sid ())
+	    {
+	      memmove (pipename_buf + 6, pipename_buf, len * sizeof (WCHAR));
+	      memcpy (pipename_buf, L"LOCAL\\", 6 * sizeof (WCHAR));
+	      len += 6;
+	      local = true;
+	      debug_printf ("pipe access denied, retrying in LOCAL\\");
+	      r = NULL;
+	      break;
+	    }
 	  /* The pipe is already open with incompatible parameters.
 	     Pick a new name and retry.  */
 	  debug_printf ("pipe access denied, retrying");
