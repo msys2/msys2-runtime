@@ -29,6 +29,7 @@ details. */
 #include "winf.h"
 #include "ntdll.h"
 #include "shared_info.h"
+#include "memory_layout.h"
 
 /* Add .exe to PROG if not already present and see if that exists.
    If not, return PROG (converted from posix to win32 rules if necessary).
@@ -557,10 +558,13 @@ child_info_spawn::worker (const char *prog_arg, const char *const *argv,
 
       /* Depends on set call above.
 	 Some file types might need extra effort in the parent after CreateProcess
-	 and before copying the datastructures to the child.  So we have to start
-	 the child in suspend state, unfortunately, to avoid a race condition. */
+	 and before copying the datastructures to the child.  In an AppContainer,
+	 Cygwin children also need their cygheap range reserved before the loader
+	 runs.  So we have to start the child in suspend state, unfortunately, to
+	 avoid a race condition. */
+      bool in_appcontainer = appcontainer_sid () != NULL;
       if (!newargv.win16_exe
-	  && (!iscygwin () || mode != _P_OVERLAY
+	  && (!iscygwin () || mode != _P_OVERLAY || in_appcontainer
 	      || ::cygheap->fdtab.need_fixup_before ()))
 	c_flags |= CREATE_SUSPENDED;
       /* If a native application should be spawned, we test here if the spawning
@@ -633,6 +637,8 @@ child_info_spawn::worker (const char *prog_arg, const char *const *argv,
       if (!iscygwin ())
 	init_console_handler (CTTY_IS_VALID (myself->ctty));
 
+      int heap_retries = 5;
+      int heap_errno = 0;
     loop:
       /* When ruid != euid we create the new process under the current original
 	 account and impersonate in child, this way maintaining the different
@@ -726,6 +732,39 @@ child_info_spawn::worker (const char *prog_arg, const char *const *argv,
 	    }
 	}
 
+      /* With forced ASLR in an AppContainer, the child's initial allocations
+	 or loader allocations may land in the cygheap range.  Reserve it before
+	 the loader runs.  If it's already taken, retry with a new process.
+	 Otherwise fail the spawn rather than start a child without it. */
+      if (rc && in_appcontainer && iscygwin () && (c_flags & CREATE_SUSPENDED)
+	  && !VirtualAllocEx (pi.hProcess, (PVOID) CYGHEAP_STORAGE_LOW,
+			      CYGHEAP_STORAGE_HIGH - CYGHEAP_STORAGE_LOW,
+			      MEM_RESERVE, PAGE_NOACCESS))
+	{
+	  DWORD err = GetLastError ();
+	  debug_printf ("cannot reserve cygheap in child, %E");
+	  /* TerminateProcess is asynchronous, so wait for the child to exit.
+	     If it can't be terminated, it stays suspended and is never
+	     resumed. */
+	  bool gone = (TerminateProcess (pi.hProcess, EXITCODE_RETRY)
+		       || WaitForSingleObject (pi.hProcess, 0) == WAIT_OBJECT_0)
+		      && WaitForSingleObject (pi.hProcess, 5000) == WAIT_OBJECT_0;
+	  if (!gone)
+	    system_printf ("cannot terminate suspended child %u, %E",
+			   pi.dwProcessId);
+	  CloseHandle (pi.hThread);
+	  CloseHandle (pi.hProcess);
+	  if (gone && err == ERROR_INVALID_ADDRESS && heap_retries-- > 0)
+	    {
+	      cygheap->unlock ();
+	      goto loop;
+	    }
+	  heap_errno = (err == ERROR_INVALID_ADDRESS)
+		       ? EAGAIN : geterrno_from_win_error (err, ENOMEM);
+	  SetLastError (err);
+	  rc = FALSE;
+	}
+
       if (mode != _P_OVERLAY)
 	SetHandleInformation (my_wr_proc_pipe, HANDLE_FLAG_INHERIT,
 			      HANDLE_FLAG_INHERIT);
@@ -735,7 +774,10 @@ child_info_spawn::worker (const char *prog_arg, const char *const *argv,
 	 messages].  */
       if (!rc)
 	{
-	  __seterrno ();
+	  if (heap_errno)
+	    set_errno (heap_errno);
+	  else
+	    __seterrno ();
 	  syscall_printf ("CreateProcess failed, %E");
 	  /* If this was a failed exec, restore the saved sendsig. */
 	  if (reset_sendsig)

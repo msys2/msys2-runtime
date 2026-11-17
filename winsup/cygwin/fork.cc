@@ -24,6 +24,7 @@ details. */
 #include "dll_init.h"
 #include "cygmalloc.h"
 #include "ntdll.h"
+#include "memory_layout.h"
 
 #define NPIDS_HELD 4
 
@@ -56,6 +57,84 @@ resume_child (HANDLE forker_finished)
   SetEvent (forker_finished);
   debug_printf ("signalled child");
   return;
+}
+
+static bool
+nt_fail (NTSTATUS status)
+{
+  SetLastError (RtlNtStatusToDosError (status));
+  return false;
+}
+
+/* With forced ASLR in an AppContainer, the suspended child's executable
+   may be loaded at a different address than the parent's, and loader
+   allocations may land in the cygheap range.  Reserve the cygheap, and if
+   necessary map another view of the executable at the parent's address and
+   point the PEB and the initial thread at it.  The original view must stay
+   mapped, since the kernel still uses it when creating threads. */
+static bool
+map_fork_executable (const PROCESS_INFORMATION &pi)
+{
+  if (!VirtualAllocEx (pi.hProcess, (PVOID) CYGHEAP_STORAGE_LOW,
+		       CYGHEAP_STORAGE_HIGH - CYGHEAP_STORAGE_LOW,
+		       MEM_RESERVE, PAGE_NOACCESS))
+    return false;
+
+  PROCESS_BASIC_INFORMATION pbi;
+  NTSTATUS status = NtQueryInformationProcess (pi.hProcess,
+					       ProcessBasicInformation,
+					       &pbi, sizeof pbi, NULL);
+  if (!NT_SUCCESS (status))
+    return nt_fail (status);
+  PVOID image, mapped = GetModuleHandleW (NULL);
+  PVOID *image_slot = &pbi.PebBaseAddress->Reserved3[1];
+  if (!ReadProcessMemory (pi.hProcess, image_slot, &image, sizeof image, NULL))
+    return false;
+  if (image == mapped)
+    return true;
+
+  /* The register holding the initial thread's start address. */
+#if defined (__x86_64__)
+#define START_ADDRESS_REG Rcx
+/* Untested: AArch64 presumably passes the start address in X0.
+#elif defined (__aarch64__)
+#define START_ADDRESS_REG X0 */
+#endif
+#ifndef START_ADDRESS_REG
+  /* Leave the executable where it is; the fork fails later, as before. */
+  return true;
+#else
+  CONTEXT ctx = {};
+  ctx.ContextFlags = CONTEXT_INTEGER;
+  DWORD entry = ((pefile *) mapped)->optional_hdr ()->AddressOfEntryPoint;
+  if (!GetThreadContext (pi.hThread, &ctx))
+    return false;
+  if (ctx.START_ADDRESS_REG != (DWORD64) image + entry
+      || !dlls.main_executable)
+    return nt_fail (STATUS_NOT_SUPPORTED);
+
+  HANDLE file = dll_list::ntopenfile (dlls.main_executable->forkedntname (),
+				      &status, 0, FILE_READ_DATA | FILE_EXECUTE);
+  if (file == INVALID_HANDLE_VALUE)
+    return nt_fail (status);
+  HANDLE section;
+  status = NtCreateSection (&section, SECTION_MAP_READ | SECTION_MAP_EXECUTE,
+			    NULL, NULL, PAGE_READONLY, SEC_IMAGE, file);
+  NtClose (file);
+  if (!NT_SUCCESS (status))
+    return nt_fail (status);
+  SIZE_T size = 0;
+  status = NtMapViewOfSection (section, pi.hProcess, &mapped, 0, 0, NULL,
+			       &size, ViewUnmap, 0, PAGE_READONLY);
+  NtClose (section);
+  if (!NT_SUCCESS (status))
+    return nt_fail (status);
+
+  ctx.START_ADDRESS_REG = (DWORD64) mapped + entry;
+  return WriteProcessMemory (pi.hProcess, image_slot, &mapped, sizeof mapped,
+			     NULL)
+	 && SetThreadContext (pi.hThread, &ctx);
+#endif
 }
 
 /* Notify parent that it is time for the next step. */
@@ -267,9 +346,11 @@ frok::parent (volatile char *stack_here)
 
   /* Some file types (currently only sockets) need extra effort in the
      parent after CreateProcess and before copying the datastructures
-     to the child. So we have to start the child in suspend state,
-     unfortunately, to avoid a race condition. */
-  if (cygheap->fdtab.need_fixup_before ())
+     to the child.  In an AppContainer, the executable must also be aligned
+     before loader initialization.  So we have to start the child in suspend
+     state, unfortunately, to avoid a race condition. */
+  bool in_appcontainer = appcontainer_sid () != NULL;
+  if (in_appcontainer || cygheap->fdtab.need_fixup_before ())
     c_flags |= CREATE_SUSPENDED;
 
   /* Remember if we need to load dynamically linked dlls.
@@ -348,6 +429,7 @@ frok::parent (volatile char *stack_here)
 		     PROCESS_QUERY_LIMITED_INFORMATION))
     sa = &sec_none_nih;
 
+  int image_retries = 5;
   while (1)
     {
       PCWCHAR forking_progname = NULL;
@@ -389,11 +471,28 @@ frok::parent (volatile char *stack_here)
 	  goto cleanup;
 	}
 
-      if (cygheap->fdtab.need_fixup_before ())
+      if (in_appcontainer && !map_fork_executable (pi))
 	{
-	  cygheap->fdtab.fixup_before_fork (pi.dwProcessId);
-	  ResumeThread (pi.hThread);
+	  /* The address range is taken in this child; try a new one. */
+	  if (GetLastError () == ERROR_INVALID_ADDRESS && image_retries-- > 0
+	      && TerminateProcess (pi.hProcess, EXITCODE_RETRY))
+	    {
+	      CloseHandle (pi.hThread);
+	      CloseHandle (pi.hProcess);
+	      continue;
+	    }
+	  this_errno = geterrno_from_win_error ();
+	  error ("unable to map fork executable at parent address, %E");
+	  CloseHandle (pi.hThread);
+	  hchild = pi.hProcess;
+	  dlls.release_forkables ();
+	  goto cleanup;
 	}
+
+      if (cygheap->fdtab.need_fixup_before ())
+	cygheap->fdtab.fixup_before_fork (pi.dwProcessId);
+      if (c_flags & CREATE_SUSPENDED)
+	ResumeThread (pi.hThread);
 
       CloseHandle (pi.hThread);
       hchild = pi.hProcess;
