@@ -2521,6 +2521,21 @@ pwdgrp::fetch_account_from_windows (fetch_user_arg_t &arg, bool ugid_caching, cy
 	      if (acc_type == SidTypeUser)
 		{
 		  nas = NetUserGetInfo (NULL, name, 3, (PBYTE *) &ui);
+		  if (nas == ERROR_ACCESS_DENIED)
+		    {
+		      /* Sandboxed processes, e.g. in Microsoft's MXC
+			 ProcessContainer, may not be allowed to query the SAM.
+			 Still honor the nsswitch.conf settings that do not
+			 depend on it. */
+		      home = cygheap->pg.get_home ((PUSER_INFO_3) NULL, sid, dom,
+						   name, fully_qualified_name);
+		      shell = cygheap->pg.get_shell ((PUSER_INFO_3) NULL, sid,
+						     dom, name,
+						     fully_qualified_name);
+		      gecos = cygheap->pg.get_gecos ((PUSER_INFO_3) NULL, sid,
+						     dom, name,
+						     fully_qualified_name);
+		    }
 		  if (nas != NERR_Success)
 		    {
 		      debug_printf ("NetUserGetInfo(%W) %u", name, nas);
