@@ -71,7 +71,8 @@ nt_fail (NTSTATUS status)
    force ASLR on all images, and high-entropy ASLR may also place the
    loader's allocations in the cygheap range.  This only checks the current
    process, which is exact for fork, but not for spawning a different
-   executable. */
+   executable; for that, spawn also honors "high_entropy_va:always" in the
+   CYGWIN environment variable. */
 bool
 has_aslr_risk ()
 {

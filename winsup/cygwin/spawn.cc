@@ -562,7 +562,7 @@ child_info_spawn::worker (const char *prog_arg, const char *const *argv,
 	 high-entropy ASLR, Cygwin children also need their cygheap range
 	 reserved before the loader runs.  So we have to start the child in
 	 suspend state, unfortunately, to avoid a race condition. */
-      bool aslr_risk = has_aslr_risk ();
+      bool aslr_risk = assume_high_entropy_va || has_aslr_risk ();
       if (!newargv.win16_exe
 	  && (!iscygwin () || mode != _P_OVERLAY || aslr_risk
 	      || ::cygheap->fdtab.need_fixup_before ()))

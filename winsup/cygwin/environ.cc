@@ -96,6 +96,12 @@ set_winsymlinks (const char *buf)
     allow_winsymlinks = WSYM_sysfile;
 }
 
+static void
+set_high_entropy_va (const char *buf)
+{
+  assume_high_entropy_va = buf && ascii_strcasematch (buf, "always");
+}
+
 /* The structure below is used to set up an array which is used to
    parse the CYGWIN environment variable or, if enabled, options from
    the registry.  */
@@ -125,6 +131,8 @@ static struct parse_thing
   {"error_start", {func: error_start_init}, isfunc, NULL, {{0}, {0}}},
   {"export", {&export_settings}, setbool, NULL, {{false}, {true}}},
   {"glob", {func: glob_init}, isfunc, NULL, {{0}, {s: "normal"}}},
+  {"high_entropy_va", {func: set_high_entropy_va}, isfunc, NULL,
+   {{0}, {s: "always"}}},
   {"nativeinnerlinks", {&nativeinnerlinks}, setbool, NULL, {{false}, {true}}},
   {"pipe_byte", {&pipe_byte}, setbool, NULL, {{false}, {true}}},
   {"proc_retry", {func: set_proc_retry}, isfunc, NULL, {{0}, {5}}},
