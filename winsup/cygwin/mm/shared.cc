@@ -23,11 +23,44 @@ details. */
 #include "spinlock.h"
 #include <alloca.h>
 #include <wchar.h>
+#include <securityappcontainer.h>
 
 shared_info NO_COPY *cygwin_shared;
 user_info NO_COPY *user_shared;
 HANDLE NO_COPY cygwin_shared_h;
 HANDLE NO_COPY cygwin_user_h;
+
+/* A process in an AppContainer may not create objects in \BaseNamedObjects
+   or below \Sessions\BNOLINKS, only in its container's own named object
+   directory, \Sessions\<n>\AppContainerNamedObjects\<SID>.  Create the
+   directory there instead.  Processes in the same AppContainer share it,
+   processes outside of it don't.  Return STATUS_ACCESS_DENIED if the
+   process isn't in an AppContainer. */
+static NTSTATUS
+create_appcontainer_dir (HANDLE *dir, PUNICODE_STRING uname, PWCHAR buf)
+{
+  WCHAR acpath[MAX_PATH];
+  ULONG len;
+  PROCESS_SESSION_INFORMATION psi;
+  OBJECT_ATTRIBUTES attr;
+  NTSTATUS status;
+
+  if (!GetAppContainerNamedObjectPath (NULL, NULL, MAX_PATH, acpath, &len))
+    return STATUS_ACCESS_DENIED;
+  status = NtQueryInformationProcess (NtCurrentProcess (),
+				      ProcessSessionInformation,
+				      &psi, sizeof psi, NULL);
+  if (!NT_SUCCESS (status))
+    return status;
+  __small_swprintf (buf, L"\\Sessions\\%u\\%W\\%s%s-%S",
+		    psi.SessionId, acpath, cygwin_version.shared_id,
+		    _cygwin_testing ? cygwin_version.dll_build_date : "",
+		    &cygheap->installation_key);
+  RtlInitUnicodeString (uname, buf);
+  InitializeObjectAttributes (&attr, uname, OBJ_OPENIF, NULL,
+			      everyone_sd (CYG_SHARED_DIR_ACCESS));
+  return NtCreateDirectoryObject (dir, CYG_SHARED_DIR_ACCESS, &attr);
+}
 
 /* This function returns a handle to the top-level directory in the global
    NT namespace used to implement global objects including shared memory. */
@@ -53,6 +86,8 @@ get_shared_parent_dir ()
 				  everyone_sd (CYG_SHARED_DIR_ACCESS));
       status = NtCreateDirectoryObject (&shared_parent_dir,
 					CYG_SHARED_DIR_ACCESS, &attr);
+      if (status == STATUS_ACCESS_DENIED)
+	status = create_appcontainer_dir (&shared_parent_dir, &uname, bnoname);
       if (!NT_SUCCESS (status))
 	api_fatal ("NtCreateDirectoryObject(%S): %y", &uname, status);
     }
@@ -89,6 +124,9 @@ get_session_parent_dir ()
 				      everyone_sd(CYG_SHARED_DIR_ACCESS));
 	  status = NtCreateDirectoryObject (&session_parent_dir,
 					    CYG_SHARED_DIR_ACCESS, &attr);
+	  if (status == STATUS_ACCESS_DENIED)
+	    status = create_appcontainer_dir (&session_parent_dir, &uname,
+					      bnoname);
 	  if (!NT_SUCCESS (status))
 	    api_fatal ("NtCreateDirectoryObject(%S): %y", &uname, status);
 	}
