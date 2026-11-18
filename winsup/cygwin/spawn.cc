@@ -558,13 +558,13 @@ child_info_spawn::worker (const char *prog_arg, const char *const *argv,
 
       /* Depends on set call above.
 	 Some file types might need extra effort in the parent after CreateProcess
-	 and before copying the datastructures to the child.  In an AppContainer,
-	 Cygwin children also need their cygheap range reserved before the loader
-	 runs.  So we have to start the child in suspend state, unfortunately, to
-	 avoid a race condition. */
-      bool in_appcontainer = appcontainer_sid () != NULL;
+	 and before copying the datastructures to the child.  With forced or
+	 high-entropy ASLR, Cygwin children also need their cygheap range
+	 reserved before the loader runs.  So we have to start the child in
+	 suspend state, unfortunately, to avoid a race condition. */
+      bool aslr_risk = has_aslr_risk ();
       if (!newargv.win16_exe
-	  && (!iscygwin () || mode != _P_OVERLAY || in_appcontainer
+	  && (!iscygwin () || mode != _P_OVERLAY || aslr_risk
 	      || ::cygheap->fdtab.need_fixup_before ()))
 	c_flags |= CREATE_SUSPENDED;
       /* If a native application should be spawned, we test here if the spawning
@@ -732,11 +732,11 @@ child_info_spawn::worker (const char *prog_arg, const char *const *argv,
 	    }
 	}
 
-      /* With forced ASLR in an AppContainer, the child's initial allocations
+      /* With forced or high-entropy ASLR, the child's initial allocations
 	 or loader allocations may land in the cygheap range.  Reserve it before
 	 the loader runs.  If it's already taken, retry with a new process.
 	 Otherwise fail the spawn rather than start a child without it. */
-      if (rc && in_appcontainer && iscygwin () && (c_flags & CREATE_SUSPENDED)
+      if (rc && aslr_risk && iscygwin () && (c_flags & CREATE_SUSPENDED)
 	  && !VirtualAllocEx (pi.hProcess, (PVOID) CYGHEAP_STORAGE_LOW,
 			      CYGHEAP_STORAGE_HIGH - CYGHEAP_STORAGE_LOW,
 			      MEM_RESERVE, PAGE_NOACCESS))

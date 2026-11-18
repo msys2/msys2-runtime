@@ -194,6 +194,8 @@ public:
 
 extern child_info_spawn ch_spawn;
 
+extern bool has_aslr_risk ();
+
 #define have_execed ch_spawn.has_execed ()
 #define have_execed_cygwin ch_spawn.has_execed_cygwin ()
 

@@ -66,9 +66,27 @@ nt_fail (NTSTATUS status)
   return false;
 }
 
+/* Whether ASLR may place a new process' executable or early allocations
+   where fork expects the parent's executable or the cygheap: AppContainers
+   force ASLR on all images, and high-entropy ASLR may also place the
+   loader's allocations in the cygheap range.  This only checks the current
+   process, which is exact for fork, but not for spawning a different
+   executable. */
+bool
+has_aslr_risk ()
+{
+  PROCESS_MITIGATION_ASLR_POLICY aslr;
+
+  return appcontainer_sid ()
+	 || (GetProcessMitigationPolicy (GetCurrentProcess (),
+					 ProcessASLRPolicy, &aslr, sizeof aslr)
+	     && aslr.EnableHighEntropy);
+}
+
 /* With forced ASLR in an AppContainer, the suspended child's executable
    may be loaded at a different address than the parent's, and loader
-   allocations may land in the cygheap range.  Reserve the cygheap, and if
+   allocations may land in the cygheap range.  The latter can also happen
+   with high-entropy ASLR.  Reserve the cygheap, and if
    necessary map another view of the executable at the parent's address and
    point the PEB and the initial thread at it.  The original view must stay
    mapped, since the kernel still uses it when creating threads. */
@@ -346,11 +364,12 @@ frok::parent (volatile char *stack_here)
 
   /* Some file types (currently only sockets) need extra effort in the
      parent after CreateProcess and before copying the datastructures
-     to the child.  In an AppContainer, the executable must also be aligned
-     before loader initialization.  So we have to start the child in suspend
-     state, unfortunately, to avoid a race condition. */
-  bool in_appcontainer = appcontainer_sid () != NULL;
-  if (in_appcontainer || cygheap->fdtab.need_fixup_before ())
+     to the child.  With forced or high-entropy ASLR, the executable must
+     also be aligned and the cygheap reserved before loader initialization.
+     So we have to start the child in suspend state, unfortunately, to avoid
+     a race condition. */
+  bool aslr_risk = has_aslr_risk ();
+  if (aslr_risk || cygheap->fdtab.need_fixup_before ())
     c_flags |= CREATE_SUSPENDED;
 
   /* Remember if we need to load dynamically linked dlls.
@@ -471,7 +490,7 @@ frok::parent (volatile char *stack_here)
 	  goto cleanup;
 	}
 
-      if (in_appcontainer && !map_fork_executable (pi))
+      if (aslr_risk && !map_fork_executable (pi))
 	{
 	  /* The address range is taken in this child; try a new one. */
 	  if (GetLastError () == ERROR_INVALID_ADDRESS && image_retries-- > 0
