@@ -746,6 +746,7 @@ dll_crt0_0 ()
 
   device::init ();
   do_global_ctors (&__CTOR_LIST__, 1);
+  init_appcontainer_security ();
   cygthread::init ();
 
   if (!child_proc_info)

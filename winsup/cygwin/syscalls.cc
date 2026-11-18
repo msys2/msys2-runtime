@@ -3661,7 +3661,7 @@ seteuid (uid_t uid)
 	debug_printf ("NtSetInformationToken (user.token, TokenPrimaryGroup),"
 		      "%y", status);
       /* Try setting default DACL */
-      PACL dacl_buf = (PACL) alloca (MAX_DACL_LEN (5));
+      PACL dacl_buf = (PACL) alloca (MAX_DACL_LEN (6));
       if (sec_acl (dacl_buf, true, true, usersid))
 	{
 	  TOKEN_DEFAULT_DACL tdacl = { dacl_buf };

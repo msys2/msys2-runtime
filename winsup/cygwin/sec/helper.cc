@@ -26,7 +26,7 @@ details. */
 #include "ldap.h"
 
 /* General purpose security attribute objects for global use. */
-static NO_COPY_RO SECURITY_DESCRIPTOR null_sdp =
+static NO_COPY SECURITY_DESCRIPTOR null_sdp =
 	{ SECURITY_DESCRIPTOR_REVISION, 0, SE_DACL_PRESENT,
 	  NULL, NULL, NULL, NULL };
 SECURITY_ATTRIBUTES NO_COPY_RO sec_none =
@@ -543,11 +543,45 @@ set_cygwin_privileges (HANDLE token)
 #endif
 }
 
+/* The SID of the AppContainer this process runs in, if it runs in one. */
+static NO_COPY PSID appcontainer_sid;
+
+/* An AppContainer process is granted access to an object only if its DACL
+   grants it to the container as well: "Everyone" doesn't include it, and a
+   NULL DACL grants it nothing.  So in an AppContainer, note its SID for
+   sec_acl and _everyone_sd, and give the descriptor behind sec_all and
+   sec_all_nih a DACL granting all access to everyone and to the container.
+   Called once hProcToken is open and the well-known SIDs are set. */
+void
+init_appcontainer_security ()
+{
+  static NO_COPY union
+    {
+      TOKEN_APPCONTAINER_INFORMATION info;
+      BYTE buf[sizeof (TOKEN_APPCONTAINER_INFORMATION) + SECURITY_MAX_SID_SIZE];
+    } ac;
+  static NO_COPY BYTE acl_buf[MAX_DACL_LEN (2)];
+  PACL acl = (PACL) acl_buf;
+  ULONG len;
+
+  if (!NT_SUCCESS (NtQueryInformationToken (hProcToken, TokenAppContainerSid,
+					    &ac, sizeof ac, &len))
+      || !ac.info.TokenAppContainer)
+    return;
+  appcontainer_sid = ac.info.TokenAppContainer;
+  if (NT_SUCCESS (RtlCreateAcl (acl, sizeof acl_buf, ACL_REVISION))
+      && NT_SUCCESS (RtlAddAccessAllowedAce (acl, ACL_REVISION, GENERIC_ALL,
+					     well_known_world_sid))
+      && NT_SUCCESS (RtlAddAccessAllowedAce (acl, ACL_REVISION, GENERIC_ALL,
+					     appcontainer_sid)))
+    RtlSetDaclSecurityDescriptor (&null_sdp, TRUE, acl, FALSE);
+}
+
 bool
 sec_acl (PACL acl, bool original, bool admins, PSID sid1, PSID sid2, DWORD access2)
 {
   NTSTATUS status;
-  size_t acl_len = MAX_DACL_LEN (5);
+  size_t acl_len = MAX_DACL_LEN (6);
   LPVOID pAce;
   cygpsid psid;
 
@@ -591,6 +625,13 @@ sec_acl (PACL acl, bool original, bool admins, PSID sid1, PSID sid2, DWORD acces
 				   well_known_system_sid);
   if (!NT_SUCCESS (status))
     debug_printf ("RtlAddAccessAllowedAce(system) %y", status);
+  if (appcontainer_sid)
+    {
+      status = RtlAddAccessAllowedAce (acl, ACL_REVISION, GENERIC_ALL,
+				       appcontainer_sid);
+      if (!NT_SUCCESS (status))
+	debug_printf ("RtlAddAccessAllowedAce(appcontainer) %y", status);
+    }
   status = RtlFirstFreeAce (acl, &pAce);
   if (NT_SUCCESS (status) && pAce)
     acl->AclSize = (char *) pAce - (char *) acl;
@@ -681,7 +722,9 @@ _recycler_sd (void *buf, bool users, bool dir)
 
 /* Helper function to create an event security descriptor which only allows
    specific access to everyone.  Only the creating process has all access
-   rights. */
+   rights.  "Everyone" doesn't include AppContainer processes, so in an
+   AppContainer, grant the same access to the AppContainer's own SID, so
+   that processes in the same container can open the object. */
 
 PSECURITY_DESCRIPTOR
 _everyone_sd (void *buf, ACCESS_MASK access)
@@ -693,9 +736,12 @@ _everyone_sd (void *buf, ACCESS_MASK access)
     {
       RtlCreateSecurityDescriptor (psd, SECURITY_DESCRIPTOR_REVISION);
       PACL dacl = (PACL) (psd + 1);
-      RtlCreateAcl (dacl, MAX_DACL_LEN (1), ACL_REVISION);
+      RtlCreateAcl (dacl, MAX_DACL_LEN (2), ACL_REVISION);
       status = RtlAddAccessAllowedAce (dacl, ACL_REVISION, access,
 				       well_known_world_sid);
+      if (NT_SUCCESS (status) && appcontainer_sid)
+	status = RtlAddAccessAllowedAce (dacl, ACL_REVISION, access,
+					 appcontainer_sid);
       if (!NT_SUCCESS (status))
 	{
 	  debug_printf ("RtlAddAccessAllowedAce: %y", status);

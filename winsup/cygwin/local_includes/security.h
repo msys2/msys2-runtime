@@ -48,7 +48,7 @@ bool check_token_membership (PSID);
 #define MAX_DACL_LEN(n) (sizeof (ACL) \
 		   + (n) * (sizeof (ACCESS_ALLOWED_ACE) - sizeof (DWORD) \
 			    + SECURITY_MAX_SID_SIZE))
-#define SD_MIN_SIZE (sizeof (SECURITY_DESCRIPTOR) + MAX_DACL_LEN (1))
+#define SD_MIN_SIZE (sizeof (SECURITY_DESCRIPTOR) + MAX_DACL_LEN (2))
 #define ACL_MAXIMUM_SIZE 65532	/* Yeah, right.  64K - sizeof (DWORD). */
 #define SD_MAXIMUM_SIZE 65536
 #define NO_SID ((PSID)NULL)
@@ -476,6 +476,7 @@ void lsa_close_policy (HANDLE lsa);
 /* sec_helper.cc: Security helper functions. */
 int set_privilege (HANDLE token, DWORD privilege, bool enable);
 void set_cygwin_privileges (HANDLE token);
+void init_appcontainer_security ();
 
 #define _push_thread_privilege(_priv, _val, _check) { \
     HANDLE _dup_token = NULL; \
