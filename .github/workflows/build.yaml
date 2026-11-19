@@ -116,6 +116,95 @@ jobs:
       - name: Run tests
         uses: msys2/msys2-tests@main
 
+  aslr-tests:
+    needs: [build]
+    runs-on: windows-2025
+    steps:
+      - id: msys2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MSYS
+          update: true
+
+      - name: Download msys2-runtime artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: install
+          path: ${{ steps.msys2.outputs.msys2-location }}
+
+      - name: Assemble a private runtime with high-entropy ASLR
+        shell: msys2 {0}
+        run: |
+          bin=aslr/usr/bin
+          mkdir -p $bin aslr/etc aslr/tmp
+          exes="bash uname id timeout true cat"
+          exes=$(printf '/usr/bin/%s.exe ' $exes)
+          cp $exes $(ldd $exes | sed -n 's|.* => \(/usr/bin/msys-[^ ]*\.dll\) .*|\1|p' | sort -u) $bin/
+          cp /etc/nsswitch.conf /etc/fstab aslr/etc/
+          # Some MSYS2 packages are linked with high-entropy ASLR, which
+          # lets Windows place a child's early allocations in the cygheap.
+          # AppContainers additionally relocate every image that lacks
+          # DYNAMIC_BASE; see https://github.com/msys2/MSYS2-packages/pull/6789
+          peflags --dynamicbase=true --high-entropy-va=true $bin/*.exe $bin/*.dll
+          # A parent without high-entropy ASLR, to start the ones with it
+          cp /usr/bin/bash.exe $bin/plain-bash.exe
+          peflags --high-entropy-va=false $bin/plain-bash.exe
+          cat >aslr/probe.sh <<-\EOF
+          set -e
+          uname=$(/usr/bin/uname)
+          id=$(/usr/bin/id)
+          /usr/bin/bash --noprofile --norc -c 'echo child started'
+          /usr/bin/timeout 5 /usr/bin/true
+          echo pipe-ok | /usr/bin/cat
+          echo probe-done
+          EOF
+          cat >aslr/soak.sh <<-\EOF
+          expect=$'child started\npipe-ok\nprobe-done'
+          bad=0
+          for ((i = 1; i <= $1; i++)); do
+            out=$(/usr/bin/bash --noprofile --norc /probe.sh 2>&1)
+            test $? = 0 && test "$out" = "$expect" ||
+            printf 'run %d failed (%d so far):\n%s\n' $i $((++bad)) "$out"
+          done
+          echo "$bad/$1 runs failed"
+          test $bad = 0
+          EOF
+
+      - name: Fork and spawn with high-entropy ASLR
+        working-directory: aslr
+        shell: pwsh
+        env:
+          MSYS: high_entropy_va:always
+        run: |
+          .\usr\bin\plain-bash.exe --noprofile --norc /soak.sh 300
+          if ($LASTEXITCODE -ne 0) { throw "soak failed" }
+
+      - name: Fork and spawn inside an MXC process container
+        working-directory: aslr
+        shell: pwsh
+        run: |
+          npm install --no-save --ignore-scripts @microsoft/mxc-sdk@1.0.1
+          $root = (Get-Location).Path
+          [ordered]@{
+            version = '1.0.0'
+            containment = 'processcontainer'
+            process = [ordered]@{
+              commandLine = "`"$root\usr\bin\plain-bash.exe`" --noprofile --norc /soak.sh 20"
+              cwd = $root
+              timeout = 300000
+            }
+            filesystem = @{ readwritePaths = @($root) }
+            network = [ordered]@{
+              egress = @{ default = 'deny' }
+              ingress = @{ default = 'deny'; hostLoopback = 'deny' }
+            }
+            ui = @{ disable = $false }
+          } | ConvertTo-Json -Depth 5 | Set-Content -Encoding ascii policy.json
+          & .\node_modules\@microsoft\mxc-sdk\bin\x64\wxc-exec.exe policy.json 2>&1 | Tee-Object output.log
+          if ($LASTEXITCODE -ne 0 -or -not (Select-String -Quiet -SimpleMatch '0/20 runs failed' output.log)) {
+            throw "wxc-exec exited with $LASTEXITCODE, or runs failed"
+          }
+
   cygwin-tests:
     needs: [build]
     runs-on: windows-latest

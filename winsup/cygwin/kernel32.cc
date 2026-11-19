@@ -19,6 +19,31 @@ details. */
 #include "winf.h"
 #include "sys/cygwin.h"
 
+/* In an AppContainer, use the token's default security instead of a missing
+   or NULL DACL, so the AppContainer can access its named objects without
+   exposing them to other users. */
+static PSECURITY_DESCRIPTOR
+named_object_sd (PCWSTR name, LPSECURITY_ATTRIBUTES sa)
+{
+  PSECURITY_DESCRIPTOR sd = sa ? sa->lpSecurityDescriptor : NULL;
+  BOOLEAN present, defaulted;
+  PACL dacl;
+
+  /* Unnamed objects, no caller SD, or not in an AppContainer: keep as is. */
+  if (!name || !sd || !appcontainer_sid ())
+    return sd;
+  /* Invalid SD: fall back to the default security. */
+  if (!NT_SUCCESS (RtlGetDaclSecurityDescriptor (sd, &present, &dacl,
+						  &defaulted)))
+    return NULL;
+  /* No DACL, or a NULL DACL: use the default security, which includes
+     the AppContainer SID. */
+  if (!present || !dacl)
+    return NULL;
+  /* A real DACL from the caller: keep it. */
+  return sd;
+}
+
 /* Implement CreateEvent/OpenEvent so that named objects are always created in
    Cygwin shared object namespace. */
 
@@ -41,8 +66,7 @@ CreateEventW (LPSECURITY_ATTRIBUTES lpEventAttributes, BOOL bManualReset,
     }
   InitializeObjectAttributes (&attr, lpName ? &uname : NULL, flags,
 			      lpName ? get_shared_parent_dir () : NULL,
-			      lpEventAttributes
-			      ? lpEventAttributes->lpSecurityDescriptor : NULL);
+			      named_object_sd (lpName, lpEventAttributes));
   status = NtCreateEvent (&evt, EVENT_ALL_ACCESS, &attr,
 			  bManualReset ? NotificationEvent
 				       : SynchronizationEvent,
@@ -135,8 +159,7 @@ CreateMutexW (LPSECURITY_ATTRIBUTES lpMutexAttributes, BOOL bInitialOwner,
     }
   InitializeObjectAttributes (&attr, lpName ? &uname : NULL, flags,
 			      lpName ? get_shared_parent_dir () : NULL,
-			      lpMutexAttributes
-			      ? lpMutexAttributes->lpSecurityDescriptor : NULL);
+			      named_object_sd (lpName, lpMutexAttributes));
   status = NtCreateMutant (&mtx, MUTEX_ALL_ACCESS, &attr, bInitialOwner);
   if (!NT_SUCCESS (status))
     {
@@ -225,9 +248,7 @@ CreateSemaphoreW (LPSECURITY_ATTRIBUTES lpSemaphoreAttributes,
     }
   InitializeObjectAttributes (&attr, lpName ? &uname : NULL, flags,
 			      lpName ? get_shared_parent_dir () : NULL,
-			      lpSemaphoreAttributes
-			      ? lpSemaphoreAttributes->lpSecurityDescriptor
-			      : NULL);
+			      named_object_sd (lpName, lpSemaphoreAttributes));
   status = NtCreateSemaphore (&sem, SEMAPHORE_ALL_ACCESS, &attr,
 			      lInitialCount, lMaximumCount);
   if (!NT_SUCCESS (status))
@@ -336,9 +357,7 @@ CreateFileMappingW (HANDLE hFile, LPSECURITY_ATTRIBUTES lpAttributes,
     }
   InitializeObjectAttributes (&attr, lpName ? &uname : NULL, flags,
 			      lpName ? get_shared_parent_dir () : NULL,
-			      lpAttributes
-			      ? lpAttributes->lpSecurityDescriptor
-			      : NULL);
+			      named_object_sd (lpName, lpAttributes));
   if (!(attribs & (SEC_RESERVE | SEC_COMMIT)))
     attribs |= SEC_COMMIT;
   if (hFile == INVALID_HANDLE_VALUE)

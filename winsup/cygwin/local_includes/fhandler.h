@@ -659,6 +659,7 @@ class fhandler_socket_wsock: public fhandler_socket
 
  protected:
   wsa_event *wsock_events;
+  unsigned int wsock_slot;
   HANDLE wsock_mtx;
   HANDLE wsock_evt;
   bool init_events ();

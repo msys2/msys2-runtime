@@ -68,6 +68,23 @@ If supplied, wildcard matching is case insensitive.  The default is <literal>noi
 </listitem>
 
 <listitem>
+<para><envar>high_entropy_va:{auto,always}</envar> - controls whether
+the <function>exec*()</function> and <function>spawn*()</function>
+functions start Cygwin child processes suspended and reserve the address
+range of the Cygwin heap before the Windows loader runs.  This prevents
+high-entropy (64-bit) address space layout randomization from placing the
+child's early allocations where Cygwin needs them.  With
+<literal>high_entropy_va:auto</literal>, the default, this is done inside
+an AppContainer, where Windows forces it, and when the current executable
+is linked with <literal>--high-entropy-va</literal>.  With
+<literal>high_entropy_va:always</literal>, or just
+<literal>high_entropy_va</literal>, it is always done, so that a process
+without high-entropy VA can reliably start executables that use it.
+<function>fork()</function> is not affected, because the child runs the
+same executable as the parent.</para>
+</listitem>
+
+<listitem>
 <para><envar>(no)pipe_byte</envar> - if set, Cygwin opens pipes in byte mode rather than
 message mode.  This is the default starting with Cygwin 3.4.0.
 </para>

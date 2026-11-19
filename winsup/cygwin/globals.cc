@@ -75,6 +75,7 @@ winsym_t allow_winsymlinks = WSYM_deepcopy;
 bool disable_pcon;
 bool winjitdebug = false;
 bool nativeinnerlinks = true;
+bool assume_high_entropy_va;
 
 /* Taken from BSD libc:
    This variable is zero until a process has created a pthread.  It is used

@@ -668,8 +668,9 @@ create_lock_in_parent (PVOID param)
   lf_obj = (HANDLE) param;
   /* Fetch object path from handle.  Typically the length of the path
      is 146 characters, starting with
-     "\BaseNamedObject\cygwin-1S5-<16-hex-digits>\..." */
-  size = sizeof (OBJECT_NAME_INFORMATION) + 256 * sizeof (WCHAR);
+     "\BaseNamedObject\cygwin-1S5-<16-hex-digits>\...".  Paths below an
+     AppContainer's (or child AppContainer's) object directory are longer. */
+  size = sizeof (OBJECT_NAME_INFORMATION) + 512 * sizeof (WCHAR);
   ntfn = (OBJECT_NAME_INFORMATION *) alloca (size);
   memset (ntfn, 0, size);
   status = NtQueryObject (lf_obj, ObjectNameInformation, ntfn, size, &size);
