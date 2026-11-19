@@ -804,6 +804,11 @@ fhandler_pipe::close (int flag)
 #define PIPE_INTRO "\\\\.\\pipe\\cygwin-"
 #endif
 
+/* How often to pick a new name when creating a pipe is denied.  A real
+   name clash is rare enough that a few attempts suffice, while a denial
+   by policy would otherwise be retried forever.  */
+#define PIPE_ACCESS_DENIED_RETRIES 8
+
 /* Create a pipe, and return handles to the read and write ends,
    just like CreatePipe, but ensure that the write end permits
    FILE_READ_ATTRIBUTES access, on later versions of win32 where
@@ -851,6 +856,7 @@ fhandler_pipe::create (LPSECURITY_ATTRIBUTES sa_ptr, PHANDLE r, PHANDLE w,
      to be as robust as possible.  */
   DWORD err = 0;
   bool local = false;
+  int denied = 0;
   while (r && !*r)
     {
       static volatile ULONG pipe_unique_id;
@@ -917,9 +923,13 @@ fhandler_pipe::create (LPSECURITY_ATTRIBUTES sa_ptr, PHANDLE r, PHANDLE w,
 	    }
 	  /* The pipe is already open with incompatible parameters.
 	     Pick a new name and retry.  */
-	  debug_printf ("pipe access denied%s", !name ? ", retrying" : "");
-	  if (!name)
-	    *r = NULL;
+	  if (!name && ++denied < PIPE_ACCESS_DENIED_RETRIES)
+	    {
+	      debug_printf ("pipe access denied, retrying");
+	      *r = NULL;
+	    }
+	  else
+	    debug_printf ("pipe access denied");
 	  break;
 	default:
 	  {
@@ -1093,6 +1103,7 @@ nt_create (LPSECURITY_ATTRIBUTES sa_ptr, HANDLE &r, HANDLE &w, DWORD psize,
      to be as robust as possible.  */
   NTSTATUS err = STATUS_SUCCESS;
   bool local = false;
+  int denied = 0;
   while (!r && !err)
     {
       static volatile ULONG pipe_unique_id;
@@ -1153,9 +1164,13 @@ nt_create (LPSECURITY_ATTRIBUTES sa_ptr, HANDLE &r, HANDLE &w, DWORD psize,
 	    }
 	  /* The pipe is already open with incompatible parameters.
 	     Pick a new name and retry.  */
-	  debug_printf ("pipe access denied, retrying");
-	  r = NULL;
-	  break;
+	  if (++denied < PIPE_ACCESS_DENIED_RETRIES)
+	    {
+	      debug_printf ("pipe access denied, retrying");
+	      r = NULL;
+	      break;
+	    }
+	  fallthrough;
 	default:
 	  {
 	    err = status;
