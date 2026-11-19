@@ -1093,7 +1093,7 @@ nt_create (LPSECURITY_ATTRIBUTES sa_ptr, HANDLE &r, HANDLE &w, DWORD psize,
      to be as robust as possible.  */
   NTSTATUS err = STATUS_SUCCESS;
   bool local = false;
-  while (!r)
+  while (!r && !err)
     {
       static volatile ULONG pipe_unique_id;
       LONG id = InterlockedIncrement ((LONG *) &pipe_unique_id);
