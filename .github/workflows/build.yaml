@@ -62,6 +62,94 @@ jobs:
       - id: matrix
         uses: msys2/msys2-tests/gha-matrix-gen@main
 
+  layer-reexec:
+    needs: [build]
+    runs-on: windows-2022
+    timeout-minutes: 30
+    steps:
+      - name: Download msys2-runtime artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: install
+          path: install
+
+      - name: Check fork from a Server 2019 image layer
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          Start-Service docker
+          $fixture = Join-Path $env:RUNNER_TEMP layer-fixture
+          $overlay = Join-Path $env:RUNNER_TEMP layer-overlay
+          New-Item -ItemType Directory $fixture, $overlay | Out-Null
+          $sfx = Join-Path $env:RUNNER_TEMP msys2-base.sfx.exe
+          $pkg = Join-Path $env:RUNNER_TEMP msys2-runtime.pkg.tar.zst
+          $installer = 'https://github.com/msys2/msys2-installer'
+          $mirror = 'https://repo.msys2.org/msys/x86_64'
+          Invoke-WebRequest -OutFile $sfx -Uri (
+            "$installer/releases/download/2026-09-27/" +
+            'msys2-base-x86_64-20260927.sfx.exe')
+          Invoke-WebRequest -OutFile $pkg -Uri (
+            "$mirror/msys2-runtime-3.6.11-3-x86_64.pkg.tar.zst")
+          $sfxHash = (
+            'ad336cccfda47758b5e15cda993fbba421115cb0b126697daef1ee4dfe37209f')
+          $pkgHash = (
+            'b6478bd1b4cb4b2e07c45db725fee93f9424c19fa248240dcb7b7f4187cd92db')
+          if ((Get-FileHash $sfx).Hash -ne $sfxHash -or
+              (Get-FileHash $pkg).Hash -ne $pkgHash) {
+            throw 'Unexpected MSYS2 fixture checksum'
+          }
+          $extract = Start-Process -FilePath $sfx `
+            -ArgumentList "-y -o`"$fixture`"" -Wait -PassThru
+          if ($extract.ExitCode -ne 0) { throw 'MSYS2 extraction failed' }
+
+          @'
+          FROM mcr.microsoft.com/windows/servercore:ltsc2019
+          COPY msys64 C:/msys64
+          '@ | Set-Content "$fixture\Dockerfile"
+          docker build --isolation=hyperv -t layer-fixture $fixture
+          @'
+          FROM layer-fixture
+          COPY msys-2.0.dll C:/msys64/usr/bin/msys-2.0.dll
+          '@ | Set-Content "$overlay\Dockerfile"
+
+          function Test-LayerFork($dll, $expected) {
+            Copy-Item $dll "$overlay\msys-2.0.dll"
+            docker build --isolation=hyperv -t layer-probe $overlay
+            # Bash must be the entry process, with nothing reading its DLL
+            # through the container volume before it starts.
+            $PSNativeCommandUseErrorActionPreference = $false
+            $probe = 'for ((i=0;i<100;i++)); do ' +
+              'x=$(echo ok) && [[ $x = ok ]] || exit 1; done; exit 7'
+            $output = docker run --rm --isolation=hyperv -e MSYSTEM=MSYS `
+              layer-probe 'C:\msys64\usr\bin\bash.exe' --noprofile --norc `
+              -c $probe 2>&1
+            $status = $LASTEXITCODE
+            $output | Out-Host
+            Write-Host "Fork probe: expected $expected, exited $status"
+            if ($expected -eq 'fork error') {
+              $forkError = ($output -join "`n") -match
+                'child_copy:.*Win32 error 299'
+              if (!$status -or $status -eq 7 -or !$forkError) {
+                throw "Control did not reproduce the fork failure"
+              }
+            } elseif ($status -ne 7) {
+              throw "Expected the fork probe to exit 7; got $status"
+            }
+          }
+
+          $path = $env:PATH
+          $env:PATH = "$fixture\msys64\usr\bin;$path"
+          $cygpath = "$fixture\msys64\usr\bin\cygpath.exe"
+          $pkgUnix = & $cygpath -u $pkg
+          $fixtureUnix = & $cygpath -u $fixture
+          & "$fixture\msys64\usr\bin\tar.exe" -xf $pkgUnix `
+            -C $fixtureUnix usr/bin/msys-2.0.dll
+          $env:PATH = $path
+          Test-LayerFork "$fixture\usr\bin\msys-2.0.dll" 'fork error'
+          Test-LayerFork 'install\usr\bin\msys-2.0.dll' 'success'
+          exit 0
+
   msys2-tests:
     needs: [build, generate-msys2-tests-matrix]
     strategy:
