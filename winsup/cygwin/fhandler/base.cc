@@ -1591,6 +1591,7 @@ fhandler_base::fhandler_base () :
   ino (0),
   _refcnt (0),
   openflags (0),
+  _getdents_dir (NULL),
   unique_id (0),
   select_sem (NULL),
   archetype (NULL),
